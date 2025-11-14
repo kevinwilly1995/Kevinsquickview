@@ -46,7 +46,7 @@ Kevin's Quick View provides instant visual feedback:
 ### Quick Start
 
 1. **Access the tool:**
-   - Download `KEVINSQUICKVIEW_with_cone_and_color.html`
+   - Download `KEVINSQUICKVIEW.html`
    - Open it in any modern web browser
    - Or visit the hosted version: [URL will be added after deployment]
 
