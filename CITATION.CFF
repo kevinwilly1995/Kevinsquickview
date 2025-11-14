@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Willy"
+    given-names: "Kevin"
+    email: kevinwilly1995@gmail.com
+    affiliation: "Thayer School of Engineering, Dartmouth College"
+title: "Kevin's Quick View: Interactive Geometry Viewer for TOPAS Monte Carlo Simulations"
+version: v1.0.0
+date-released: 2025-11-13
+url: "https://github.com/kevinwilly1995/kevins-quick-view"
+repository-code: "https://github.com/kevinwilly1995/kevins-quick-view"
+keywords:
+  - TOPAS
+  - Monte Carlo simulation
+  - geometry visualization
+  - medical physics
+  - radiation therapy
+  - Three.js
+  - interactive viewer
+license: MIT
+abstract: "Kevin's Quick View is a real-time 3D geometry visualization tool for TOPAS Monte Carlo simulations. It allows users to instantly preview, edit, and validate geometry parameters without running full simulations, dramatically reducing setup time."
