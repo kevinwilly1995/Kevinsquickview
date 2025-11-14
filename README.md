@@ -104,7 +104,7 @@ If you use Kevin's Quick View in your research, please cite:
   year         = 2025,
   publisher    = {Zenodo},
   doi          = {10.5281/zenodo.XXXXXXX},
-  url          = {https://github.com/kevinwilly1995/kevins-quick-view}
+  url          = {https://github.com/kevinwilly1995/kevinsquickview}
 }
 ```
 
