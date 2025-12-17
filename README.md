@@ -14,7 +14,7 @@ Kevin's Quick View is a real-time 3D geometry visualization tool for TOPAS Monte
 
 Traditional TOPAS geometry workflow:
 1. Write geometry parameters
-2. Run simulation (minutes to hours)
+2. Run simulation
 3. View output (VRMLviewer or ParaView)
 4. Make changes blindly
 5. Repeat...
@@ -74,6 +74,7 @@ Sample TOPAS geometry parameters are pre-loaded in the tool. You can modify valu
 ## Technical Details
 
 - **Built with:** Three.js for 3D rendering
+     - TOPAS MC geometry parameters are parsed to matching Three.js shapes to give live rendering as you write TOPAS parameters
 - **Client-side processing:** All computation happens in your browser
 - **No backend required:** Host as a static HTML file anywhere
 - **File size:** ~20 KB
@@ -103,7 +104,7 @@ If you use Kevin's Quick View in your research, please cite:
   title        = {Kevin's Quick View: Interactive Geometry Viewer for TOPAS},
   year         = 2025,
   publisher    = {Zenodo},
-  doi          = {10.5281/zenodo.XXXXXXX},
+  doi          = pending
   url          = {https://github.com/kevinwilly1995/kevinsquickview}
 }
 ```
@@ -111,7 +112,7 @@ If you use Kevin's Quick View in your research, please cite:
 **APA Style:**
 ```
 Willy, K. (2025). Kevin's Quick View: Interactive Geometry Viewer for TOPAS 
-(Version 1.0) [Software]. Zenodo. https://doi.org/10.5281/zenodo.XXXXXXX
+(Version 1.0) [Software].
 ```
 
 *A methods paper describing this tool is in preparation for submission.*
@@ -138,7 +139,7 @@ Email 2: kevin.j.willy.th@dartmouth.edu
 
 Built to support TOPAS Monte Carlo simulation workflows in medical physics research.
 
-Portions of this work have been generated utilizing LLM's, particularly for troublehsooting errors.
+Portions of this work have been generated utilizing LLM's, particularly for troublehsooting errors, generating repetitive texts
 
 ---
 
