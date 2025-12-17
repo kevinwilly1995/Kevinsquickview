@@ -12,16 +12,16 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/properties/properties.min.js"></script>
   <style>
     :root {
-      --bg: #121212;
-      --panel: #1e1e1e;
+      --bg: #424141;
+      --panel: #343434;
       --panel-2: #242424;
-      --muted: #2f2f2f;
-      --text: #eaeaea;
-      --brand: #3d5afe;
-      --brand-2: #5c6bc0;
+      --muted: #676767;
+      --text: #F7F7F7;
+      --brand: #00693E;
+      --brand-2: #12312B;
       --ok: #4caf50;
-      --warn: #ff9800;
-      --err: #f44336;
+      --warn: #FFA00F;
+      --err: #9D162E;
     }
     html, body { height: 100%; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; overflow: hidden; }
@@ -53,28 +53,31 @@
 </head>
 <body>
   <div class="container">
-    <div class="input-panel">
-      <div class="header">Kevin's Quick View for TOPAS MC</div>
-      <div class="subheader">
+   <div class="input-panel" style="display: flex; flex-direction: column; height: 100vh;">
+  <div class="header" style="background: #00693E;">Kevin's Quick View for TOPAS MC</div>
+  <div class="subheader" style="height: 120px; overflow:hidden">
         <button class="btn" id="btnUpdate">Update Geometry</button>
         <button class="btn secondary" id="btnFit">Fit to View</button>
         <button class="btn secondary" id="btnReset">Reset Camera</button>
         <button class="btn secondary" id="btnWire">Wireframe</button>
         <button class="btn secondary" id="btnAxes">Axes</button>
-        <label class="badge">Opacity <input id="opacity" type="range" min="0.05" max="1" step="0.05" value="0.7"/></label>
+        <label class="badge">Opacity <input id="opacity" type="range" min="0.05" max="1" step="0.05" value="0.7" style="accent-color: #12312B;" /></label>
       </div>
-      <div class="editor" id="editor"></div>
-      <div class="controls">
+       <div class="editor" id="editor" style="flex: 1; min-height: 0; height: 100%;"></div>
+  <div class="controls">
         <span class="badge">Views:</span>
         <button class="btn secondary" data-view="iso">Isometric</button>
         <button class="btn secondary" data-view="top">Top</button>
         <button class="btn secondary" data-view="front">Front</button>
         <button class="btn secondary" data-view="right">Right</button>
-      </div>
-      <div class="warnings-panel" id="warnings"></div>
-    </div>
+     </div>
+ <div class="warnings-panel" id="warnings" style="flex-shrink: 0; max-height: 200px; overflow: auto;"></div>
+</div>
     
     <div class="viewer-panel">
+		  <div style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10; padding: 8px 16px; border-radius: 4px; font-size: 12px; text-align: center; line-height: 1.4;">
+    Kevin Willy, Dartmouth College
+  </div>
       <canvas id="viewer"></canvas>
       <div class="legend">Scroll: zoom • Drag: orbit • Right-drag: pan</div>
     </div>
@@ -324,6 +327,10 @@ s:Ge/InnerBox/Material = "Aluminum"
         tabSize: 2,
         indentUnit: 2,
       });
+		  const cmWrapper = editorElement.querySelector('.CodeMirror');
+  if (cmWrapper) {
+    cmWrapper.style.height = '100%';
+  }
       editor.on('change', debounce(updateGeometry, 600));
     }
 
