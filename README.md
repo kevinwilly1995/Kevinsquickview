@@ -111,8 +111,7 @@ If you use Kevin's Quick View in your research, please cite:
 
 **APA Style:**
 ```
-Willy, K. (2025). Kevin's Quick View: Interactive Geometry Viewer for TOPAS 
-(Version 1.0) [Software].
+Willy, K. (2025). Kevin's Quick View. Zenodo. https://doi.org/10.5281/zenodo.20511964
 ```
 
 *A methods paper describing this tool is in preparation for submission.*
