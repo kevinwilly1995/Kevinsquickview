@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <!-- Made by your friend, Kevin  -->
 <html lang="en">
@@ -6,6 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kevin's Quick View </title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
@@ -49,20 +52,30 @@
     .legend { position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.7); backdrop-filter: blur(3px); border:1px solid #333; border-radius:8px; padding:8px 10px; font-size:11px; }
     .badge { display:inline-block; padding:2px 6px; font-size:10px; border-radius:999px; border:1px solid #333; background:#151515; color:#bbb; }
     .cm-error-line { background: rgba(244,67,54,.15) !important; }
+    #stlFileInput { display: none; }
+    .stl-list { padding: 6px 12px; background: var(--panel-2); border-top: 1px solid #303030; font-size: 11px; max-height: 80px; overflow: auto; }
+    .stl-item { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+    .stl-item input[type="checkbox"] { accent-color: var(--brand); }
+    .color-swatch { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #555; display: inline-block; }
   </style>
 </head>
 <body>
   <div class="container">
    <div class="input-panel" style="display: flex; flex-direction: column; height: 100vh;">
   <div class="header" style="background: #00693E;">Kevin's Quick View for TOPAS MC</div>
-  <div class="subheader" style="height: 120px; overflow:hidden">
+  <div class="subheader" style="overflow:hidden">
         <button class="btn" id="btnUpdate">Update Geometry</button>
         <button class="btn secondary" id="btnFit">Fit to View</button>
         <button class="btn secondary" id="btnReset">Reset Camera</button>
         <button class="btn secondary" id="btnWire">Wireframe</button>
         <button class="btn secondary" id="btnAxes">Axes</button>
+        <button class="btn secondary" id="btnLoadSTL">Load STL(s)</button>
+        <button class="btn secondary" id="btnClearSTL">Clear STLs</button>
         <label class="badge">Opacity <input id="opacity" type="range" min="0.05" max="1" step="0.05" value="0.7" style="accent-color: #12312B;" /></label>
+        <label class="badge">Beam ⌀ <input id="beamRadius" type="number" value="30" min="1" max="500" step="1" style="width: 50px; background: #1a1a1a; color: white; border: 1px solid #333; border-radius: 4px; padding: 2px 4px;"/> mm</label>
+        <input type="file" id="stlFileInput" multiple accept=".stl" />
       </div>
+      <div class="stl-list" id="stlList"></div>
        <div class="editor" id="editor" style="flex: 1; min-height: 0; height: 100%;"></div>
   <div class="controls">
         <span class="badge">Views:</span>
@@ -82,13 +95,17 @@
       <div class="legend">Scroll: zoom • Drag: orbit • Right-drag: pan</div>
     </div>
   </div>
-
+ 
   <script>
     let scene, camera, renderer, controls, axesHelper;
     let geometryGroup = new THREE.Group();
+    let beamGroup = new THREE.Group();
+    let stlGroup = new THREE.Group();
+    let stlMeshes = {};  // name -> mesh, for toggling visibility
     let wireframeMode = false; 
     let showAxes = true;
-
+    let currentBeamRadius = 30;  // mm
+ 
     class SimpleOrbitControls {
       constructor(camera, domElement) {
         this.camera = camera;
@@ -228,7 +245,7 @@
         return true;
       }
     }
-
+ 
     function initThree() {
       const canvas = document.getElementById('viewer');
       const rect = canvas.getBoundingClientRect();
@@ -248,6 +265,8 @@
       axesHelper.visible = showAxes;
       scene.add(axesHelper);
       scene.add(geometryGroup);
+      scene.add(beamGroup);
+      scene.add(stlGroup);
       window.addEventListener('resize', onResize);
       animate();
     }
@@ -264,61 +283,39 @@
       requestAnimationFrame(animate);
       renderer.render(scene, camera);
     }
-
+ 
     let editor, errorMarks = [];
     
     function initEditor(){
       const editorElement = document.getElementById('editor');
       editor = CodeMirror(editorElement, {
-        value: `# Parent-Daughter Geometry Example
+        value: `# Example with beam source
 s:Ge/World/Type = "TsBox"
 d:Ge/World/HLX = 50 cm
 d:Ge/World/HLY = 50 cm
 d:Ge/World/HLZ = 50 cm
 s:Ge/World/Material = "Air"
-
-# Large box (parent)
-s:Ge/Box1/Type = "TsBox"
-s:Ge/Box1/Parent = "World"
-d:Ge/Box1/HLX = 20 cm
-d:Ge/Box1/HLY = 20 cm
-d:Ge/Box1/HLZ = 20 cm
-d:Ge/Box1/TransX = -20 cm
-s:Ge/Box1/Material = "Water"
-
-# Daughter box cuts into parent
-s:Ge/CutBox/Type = "TsBox"
-s:Ge/CutBox/Parent = "Box1"
-d:Ge/CutBox/HLX = 8 cm
-d:Ge/CutBox/HLY = 8 cm
-d:Ge/CutBox/HLZ = 8 cm
-d:Ge/CutBox/TransX = 0 cm
-s:Ge/CutBox/Material = "Air"
-
-# Hollow Cylinder (parent)
-s:Ge/HollowCyl/Type = "TsCylinder"
-s:Ge/HollowCyl/Parent = "World"
-d:Ge/HollowCyl/RMin = 63.9 mm
-d:Ge/HollowCyl/RMax = 88.9 mm
-d:Ge/HollowCyl/HL = 84.15 mm
-d:Ge/HollowCyl/TransZ = 88.75 mm
-s:Ge/HollowCyl/Material = "Lead"
-
-# Daughter sphere inside hollow cylinder
-s:Ge/SphereInCyl/Type = "TsSphere"
-s:Ge/SphereInCyl/Parent = "HollowCyl"
-d:Ge/SphereInCyl/RMax = 50 mm
-d:Ge/SphereInCyl/TransZ = 0 cm
-s:Ge/SphereInCyl/Material = "Copper"
-
-# Multi-level: grand-daughter cuts into daughter
-s:Ge/InnerBox/Type = "TsBox"
-s:Ge/InnerBox/Parent = "CutBox"
-d:Ge/InnerBox/HLX = 3 cm
-d:Ge/InnerBox/HLY = 3 cm
-d:Ge/InnerBox/HLZ = 3 cm
-d:Ge/InnerBox/TransX = 0 cm
-s:Ge/InnerBox/Material = "Aluminum"
+ 
+# Patient target (placeholder)
+s:Ge/Patient/Type = "TsBox"
+s:Ge/Patient/Parent = "World"
+d:Ge/Patient/HLX = 12 cm
+d:Ge/Patient/HLY = 12 cm
+d:Ge/Patient/HLZ = 9 cm
+s:Ge/Patient/Material = "Water"
+ 
+# Beam position (where the phase space lives)
+s:Ge/BeamPosition/Type = "Group"
+s:Ge/BeamPosition/Parent = "World"
+d:Ge/BeamPosition/TransX = 0 mm
+d:Ge/BeamPosition/TransY = 0 mm
+d:Ge/BeamPosition/TransZ = 250 mm
+d:Ge/BeamPosition/RotX = 180 deg
+ 
+# Phase space source
+s:So/MySource/Type = "PhaseSpace"
+s:So/MySource/Component = "BeamPosition"
+s:So/MySource/PhaseSpaceFileName = "Mobetron_9MeV_A6I6_1p2"
 `,
         mode: 'properties',
         theme: 'material-darker',
@@ -333,17 +330,14 @@ s:Ge/InnerBox/Material = "Aluminum"
   }
       editor.on('change', debounce(updateGeometry, 600));
     }
-
+ 
     function colorNameToHex(colorName) {
       const colorMap = {
-        // Basic colors
         'white': 0xffffff, 'black': 0x000000,
         'red': 0xff0000, 'green': 0x00ff00, 'blue': 0x0000ff,
         'yellow': 0xffff00, 'cyan': 0x00ffff, 'magenta': 0xff00ff,
         'orange': 0xff8800, 'purple': 0x800080, 'pink': 0xffc0cb,
         'brown': 0x8b4513, 'gray': 0x808080, 'grey': 0x808080,
-        
-        // Extended colors
         'lightblue': 0xadd8e6, 'darkblue': 0x00008b,
         'lightgreen': 0x90ee90, 'darkgreen': 0x006400,
         'lightgray': 0xd3d3d3, 'darkgray': 0xa9a9a9,
@@ -355,11 +349,10 @@ s:Ge/InnerBox/Material = "Aluminum"
         'teal': 0x008080, 'maroon': 0x800000,
         'skyblue': 0x87ceeb, 'grass': 0x7cfc00
       };
-      
       const name = colorName.toLowerCase().trim();
       return colorMap[name] !== undefined ? colorMap[name] : 0xffffff;
     }
-
+ 
     const materials = {
       'Air': { color: 0x87ceeb, opacity: 0.15 },
       'Water': { color: 0x4169e1, opacity: 0.55 },
@@ -369,52 +362,79 @@ s:Ge/InnerBox/Material = "Aluminum"
       'Steel': { color: 0x708090, opacity: 0.8 },
       'Default': { color: 0xffffff, opacity: 0.7 }
     };
-
+ 
     let parsedGeometry = {};
+    let parsedSources = {};
     let nameToLine = {};
     let currentOpacity = 0.7;
-
+ 
     function parseTopasGeometry(text){
       const lines = text.split(/\r?\n/);
       const geometry = {}; 
+      const sources = {};
       const warnings = []; 
       const errors = [];
       nameToLine = {};
-
+ 
       for (let i=0;i<lines.length;i++){
         const line = lines[i].trim();
         if (!line || line.startsWith('#') || line.startsWith('//')) continue;
         
-        const m = line.match(/([sdbSDB]):Ge\/([^\/]+)\/([^=]+)\s*=\s*(.+)/);
-        if (!m) continue;
-        
-        const [, type, component, propertyRaw, valueRaw] = m;
-        if (!geometry[component]) geometry[component] = {};
-        nameToLine[component] = i+1;
-
-        const prop = normalizeProp(propertyRaw);
-        let val;
-        
-        try{
-          if (type.toLowerCase()==='s'){
-            val = valueRaw.replace(/["']/g,'');
-            if (prop==='Type') val = normalizeType(val);
-          } else if (type.toLowerCase()==='d'){
-            val = parseWithUnits(valueRaw);
-          } else if (type.toLowerCase()==='b'){
-            val = /true/i.test(valueRaw);
+        // Match Ge/ components
+        const mGe = line.match(/([sdbSDB]):Ge\/([^\/]+)\/([^=]+)\s*=\s*(.+)/);
+        if (mGe) {
+          const [, type, component, propertyRaw, valueRaw] = mGe;
+          if (!geometry[component]) geometry[component] = {};
+          nameToLine[component] = i+1;
+ 
+          const prop = normalizeProp(propertyRaw);
+          let val;
+          
+          try{
+            if (type.toLowerCase()==='s'){
+              val = valueRaw.replace(/["']/g,'');
+              if (prop==='Type') val = normalizeType(val);
+            } else if (type.toLowerCase()==='d'){
+              val = parseWithUnits(valueRaw);
+            } else if (type.toLowerCase()==='b'){
+              val = /true/i.test(valueRaw);
+            }
+          }catch(e){ 
+            errors.push(`Line ${i+1}: ${e.message}`); 
           }
-        }catch(e){ 
-          errors.push(`Line ${i+1}: ${e.message}`); 
+          
+          geometry[component][prop] = val;
+          continue;
         }
         
-        geometry[component][prop] = val;
+        // Match So/ sources
+        const mSo = line.match(/([sdbSDB]):So\/([^\/]+)\/([^=]+)\s*=\s*(.+)/);
+        if (mSo) {
+          const [, type, srcName, propertyRaw, valueRaw] = mSo;
+          if (!sources[srcName]) sources[srcName] = {};
+          const prop = propertyRaw.trim();
+          let val;
+          
+          try {
+            if (type.toLowerCase()==='s') {
+              val = valueRaw.replace(/["']/g,'').trim();
+            } else if (type.toLowerCase()==='d') {
+              val = parseWithUnits(valueRaw);
+            } else if (type.toLowerCase()==='b') {
+              val = /true/i.test(valueRaw);
+            }
+          } catch(e) {
+            errors.push(`Line ${i+1}: ${e.message}`);
+          }
+          
+          sources[srcName][prop] = val;
+        }
       }
-
+ 
       validateGeometry(geometry, warnings, errors);
-      return { geometry, warnings, errors };
+      return { geometry, sources, warnings, errors };
     }
-
+ 
     function normalizeProp(p){
       const key = p.trim();
       const map = { 
@@ -428,7 +448,7 @@ s:Ge/InnerBox/Material = "Aluminum"
       const l = key.toLowerCase();
       return map[l] || key.replace(/\s+/g,'');
     }
-
+ 
     function normalizeType(t){
       const l = t.toLowerCase();
       const map = { 
@@ -436,10 +456,11 @@ s:Ge/InnerBox/Material = "Aluminum"
         tstube:'TsTube', tstubs:'TsTubs', tscone:'TsCone', tstorus:'TsTorus',
         tsellipsoid:'TsEllipsoid', tsellipticaltube:'TsEllipticalTube',
         tstrap:'TsTrap', tstrd:'TsTrd', tspara:'TsPara', tswedge:'TsWedge',
+        group:'Group'
       };
       return map[l] || t;
     }
-
+ 
     function parseWithUnits(expr){
       const m = String(expr).trim().match(/([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\s*(\w+)?/);
       if(!m) throw new Error(`Cannot parse value '${expr}'`);
@@ -454,7 +475,7 @@ s:Ge/InnerBox/Material = "Aluminum"
       
       return num;
     }
-
+ 
     function validateGeometry(geom, warnings, errors){
       for (const [name, p] of Object.entries(geom)){
         if (!p.Type){ 
@@ -489,63 +510,40 @@ s:Ge/InnerBox/Material = "Aluminum"
     }
     
     function isInsideHollowCylinder(childGeom, cylinderGeom, childPos, cylPos) {
-      // Check if child is inside the hollow cavity of a cylinder
       if (cylinderGeom.Type !== 'TsCylinder' || !cylinderGeom.RMin || cylinderGeom.RMin <= 0) {
         return false;
       }
-      
-      // Get relative position of child to cylinder
       const relX = childPos.x - cylPos.x;
       const relY = childPos.y - cylPos.y;
       const relZ = childPos.z - cylPos.z;
-      
-      // Calculate radial distance from cylinder axis (Z-axis)
       const radialDist = Math.sqrt(relX * relX + relY * relY);
-      
-      // Check Z bounds
       const cylHL = cylinderGeom.HL || 0;
-      if (Math.abs(relZ) > cylHL) {
-        return false;
-      }
-      
-      // Check if child is within the inner radius
+      if (Math.abs(relZ) > cylHL) return false;
       let childRadius = 0;
-      if (childGeom.Type === 'TsCylinder') {
-        childRadius = childGeom.RMax || 0;
-      } else if (childGeom.Type === 'TsSphere') {
-        childRadius = childGeom.RMax || 0;
-      } else if (childGeom.Type === 'TsBox') {
-        childRadius = Math.max(childGeom.HLX || 0, childGeom.HLY || 0);
-      }
-      
+      if (childGeom.Type === 'TsCylinder') childRadius = childGeom.RMax || 0;
+      else if (childGeom.Type === 'TsSphere') childRadius = childGeom.RMax || 0;
+      else if (childGeom.Type === 'TsBox') childRadius = Math.max(childGeom.HLX || 0, childGeom.HLY || 0);
       return (radialDist + childRadius) <= cylinderGeom.RMin;
     }
-
+ 
     function checkHierarchyOverlaps(geom, meshes, warnings) {
       const allNames = Object.keys(geom);
-      
       for (const parent of allNames) {
         const children = getChildrenOf(parent, geom);
-        
         for (let i = 0; i < children.length; i++) {
           for (let j = i + 1; j < children.length; j++) {
             const child1Name = children[i];
             const child2Name = children[j];
             const child1Geom = geom[child1Name];
             const child2Geom = geom[child2Name];
-            
             if (meshes[child1Name] && meshes[child2Name]) {
               const box1 = new THREE.Box3().setFromObject(meshes[child1Name]);
               const box2 = new THREE.Box3().setFromObject(meshes[child2Name]);
-              
               if (box1.intersectsBox(box2)) {
-                // Check if one is inside the other's hollow cavity
                 const pos1 = { x: child1Geom.TransX || 0, y: child1Geom.TransY || 0, z: child1Geom.TransZ || 0 };
                 const pos2 = { x: child2Geom.TransX || 0, y: child2Geom.TransY || 0, z: child2Geom.TransZ || 0 };
-                
                 const child2InChild1Cavity = isInsideHollowCylinder(child2Geom, child1Geom, pos2, pos1);
                 const child1InChild2Cavity = isInsideHollowCylinder(child1Geom, child2Geom, pos1, pos2);
-                
                 if (!child2InChild1Cavity && !child1InChild2Cavity) {
                   warnings.push(`Overlap: '${child1Name}' and '${child2Name}' (siblings under '${parent}')`);
                 }
@@ -555,40 +553,30 @@ s:Ge/InnerBox/Material = "Aluminum"
         }
       }
     }
-
+ 
     function createHollowCylinderGeometry(rMin, rMax, height) {
       const points = [];
       points.push(new THREE.Vector2(rMin, -height / 2));
       points.push(new THREE.Vector2(rMax, -height / 2));
       points.push(new THREE.Vector2(rMax, height / 2));
       points.push(new THREE.Vector2(rMin, height / 2));
-      
-      const geometry = new THREE.LatheGeometry(points, 48, 0, Math.PI * 2);
-      return geometry;
+      return new THREE.LatheGeometry(points, 48, 0, Math.PI * 2);
     }
-
+ 
     function createHollowConeGeometry(rMin1, rMax1, rMin2, rMax2, height) {
-      // Create a hollow truncated cone using LatheGeometry
-      // Bottom (z = -height/2): rMin1 (inner), rMax1 (outer)
-      // Top (z = +height/2): rMin2 (inner), rMax2 (outer)
       const points = [];
-      
-      // Create the profile for lathe - from bottom to top
-      points.push(new THREE.Vector2(rMin1, -height / 2));  // Inner bottom
-      points.push(new THREE.Vector2(rMax1, -height / 2));  // Outer bottom
-      points.push(new THREE.Vector2(rMax2, height / 2));   // Outer top
-      points.push(new THREE.Vector2(rMin2, height / 2));   // Inner top
-      
-      const geometry = new THREE.LatheGeometry(points, 48, 0, Math.PI * 2);
-      return geometry;
+      points.push(new THREE.Vector2(rMin1, -height / 2));
+      points.push(new THREE.Vector2(rMax1, -height / 2));
+      points.push(new THREE.Vector2(rMax2, height / 2));
+      points.push(new THREE.Vector2(rMin2, height / 2));
+      return new THREE.LatheGeometry(points, 48, 0, Math.PI * 2);
     }
-
+ 
     function createMesh(name, p){
       let geom;
       
       switch(p.Type){
         case 'Group':
-          // Group is just a container, create empty geometry
           geom = new THREE.BufferGeometry();
           break;
         case 'TsBox':
@@ -605,18 +593,14 @@ s:Ge/InnerBox/Material = "Aluminum"
           geom = new THREE.SphereGeometry(p.RMax||10, 48, 32);
           break;
         case 'G4Cons':
-          // Truncated cone (conical frustum)
           const rMin1 = p.RMin1 || 0;
           const rMax1 = p.RMax1 || 10;
           const rMin2 = p.RMin2 || 0;
           const rMax2 = p.RMax2 || 10;
           const height = (p.HL || 10) * 2;
-          
           if (rMin1 > 0 || rMin2 > 0) {
-            // Hollow cone - create custom geometry
             geom = createHollowConeGeometry(rMin1, rMax1, rMin2, rMax2, height);
           } else {
-            // Solid cone
             geom = new THREE.CylinderGeometry(rMax2, rMax1, height, 48);
           }
           break;
@@ -624,7 +608,6 @@ s:Ge/InnerBox/Material = "Aluminum"
           geom = new THREE.BoxGeometry(10,10,10);
       }
       
-      // Determine color: prioritize component Color property, then material color
       let meshColor;
       if (p.Color) {
         meshColor = colorNameToHex(p.Color);
@@ -641,7 +624,6 @@ s:Ge/InnerBox/Material = "Aluminum"
         side: THREE.DoubleSide
       });
       
-      // Don't create a mesh for Group types - just use the object as a container
       let mesh;
       if (p.Type === 'Group') {
         mesh = new THREE.Object3D();
@@ -658,7 +640,7 @@ s:Ge/InnerBox/Material = "Aluminum"
       
       return mesh;
     }
-
+ 
     function buildHierarchy(geom) {
       const meshes = {};
       const roots = [];
@@ -681,26 +663,276 @@ s:Ge/InnerBox/Material = "Aluminum"
       
       return { meshes, roots };
     }
-
+ 
+    // ===== BEAM VISUALIZATION =====
+    // Compute world position of a component by walking up its parent chain
+    function getWorldTransform(componentName, geom) {
+      const pos = new THREE.Vector3(0, 0, 0);
+      const rot = new THREE.Euler(0, 0, 0, 'XYZ');
+      
+      let current = componentName;
+      const chain = [];
+      while (current && geom[current]) {
+        chain.push(current);
+        current = geom[current].Parent;
+      }
+      
+      // Apply transforms from world down to leaf
+      const matrix = new THREE.Matrix4();
+      for (let i = chain.length - 1; i >= 0; i--) {
+        const comp = geom[chain[i]];
+        // Same coordinate swap as createMesh: (x, z, y) in Three.js
+        const localPos = new THREE.Vector3(comp.TransX||0, comp.TransZ||0, comp.TransY||0);
+        const localRot = new THREE.Euler(
+          comp.RotX||0,    // X
+          comp.RotZ||0,    // Three.js Y ← TOPAS Z
+          comp.RotY||0,    // Three.js Z ← TOPAS Y
+          'XYZ'
+        );
+        const localMatrix = new THREE.Matrix4().compose(
+          localPos,
+          new THREE.Quaternion().setFromEuler(localRot),
+          new THREE.Vector3(1,1,1)
+        );
+        matrix.multiply(localMatrix);
+      }
+      
+      pos.setFromMatrixPosition(matrix);
+      const quat = new THREE.Quaternion().setFromRotationMatrix(matrix);
+      return { position: pos, quaternion: quat };
+    }
+ 
+    function drawBeams(sources, geom) {
+      // Clear previous beams
+      while (beamGroup.children.length > 0) {
+        beamGroup.remove(beamGroup.children[0]);
+      }
+      
+      const beamColor = 0xff3366;
+      
+      for (const [name, src] of Object.entries(sources)) {
+        const componentName = src.Component;
+        if (!componentName || !geom[componentName]) continue;
+        
+        const { position, quaternion } = getWorldTransform(componentName, geom);
+        
+        // Beam direction: phase space particles travel +Z in their local frame
+        // BeamPosition with RotX=180 flips this to -Z
+        // We apply the component's rotation to the default +Z vector
+        const beamDir = new THREE.Vector3(0, 1, 0); // Three.js Y is up = TOPAS Z 
+        beamDir.applyQuaternion(quaternion);
+        beamDir.normalize();
+        
+        // 1. Source plane (circle showing beam aperture)
+        const circleGeom = new THREE.CircleGeometry(currentBeamRadius, 48);
+        const circleMat = new THREE.MeshBasicMaterial({ 
+          color: beamColor, 
+          side: THREE.DoubleSide, 
+          transparent: true, 
+          opacity: 0.4 
+        });
+        const circle = new THREE.Mesh(circleGeom, circleMat);
+        circle.position.copy(position);
+        // Circle's normal is +Z by default; orient it so its normal aligns with beamDir
+        circle.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), beamDir);
+        beamGroup.add(circle);
+        
+        // 2. Circle outline (more visible)
+        const ringGeom = new THREE.RingGeometry(currentBeamRadius * 0.97, currentBeamRadius * 1.03, 48);
+        const ringMat = new THREE.MeshBasicMaterial({ color: beamColor, side: THREE.DoubleSide });
+        const ring = new THREE.Mesh(ringGeom, ringMat);
+        ring.position.copy(position);
+        ring.quaternion.copy(circle.quaternion);
+        beamGroup.add(ring);
+        
+        // 3. Direction arrow
+        const arrowLength = 300;
+        const arrow = new THREE.ArrowHelper(beamDir, position, arrowLength, beamColor, 40, 20);
+        beamGroup.add(arrow);
+        
+        // 4. Beam volume cone (showing trajectory)
+        const coneLen = 800;
+        const coneGeom = new THREE.CylinderGeometry(
+          currentBeamRadius, currentBeamRadius * 1.5, coneLen, 48, 1, true
+        );
+        const coneMat = new THREE.MeshBasicMaterial({ 
+          color: beamColor, 
+          wireframe: true, 
+          transparent: true, 
+          opacity: 0.25 
+        });
+        const cone = new THREE.Mesh(coneGeom, coneMat);
+        // Cylinder is along Y by default; rotate to align with beamDir, place midway
+        cone.position.copy(position.clone().add(beamDir.clone().multiplyScalar(coneLen / 2)));
+        cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), beamDir);
+        beamGroup.add(cone);
+        
+        // 5. Label sprite
+        const label = makeTextSprite(`Beam: ${name}`, beamColor);
+        label.position.copy(position.clone().add(new THREE.Vector3(0, currentBeamRadius + 15, 0)));
+        beamGroup.add(label);
+      }
+    }
+ 
+    function makeTextSprite(text, color) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+      ctx.font = 'bold 24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+      const texture = new THREE.CanvasTexture(canvas);
+      const mat = new THREE.SpriteMaterial({ map: texture });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(80, 20, 1);
+      return sprite;
+    }
+ 
+    // ===== STL LOADING =====
+    function loadSTL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          try {
+            const loader = new THREE.STLLoader();
+            const geom = loader.parse(e.target.result);
+            
+            // Apply Y/Z swap to match the existing coordinate convention
+            // (TOPAS uses Z-up, Three.js uses Y-up — matches what createMesh does)
+            const swapMatrix = new THREE.Matrix4().set(
+              1, 0, 0, 0,
+              0, 0, 1, 0,
+              0, 1, 0, 0,
+              0, 0, 0, 1
+            );
+            geom.applyMatrix4(swapMatrix);
+            geom.computeVertexNormals();
+            
+            resolve({ name: file.name, geometry: geom });
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = () => reject(new Error('Failed to read ' + file.name));
+        reader.readAsArrayBuffer(file);
+      });
+    }
+ 
+    // Color map for common segmentation names
+    function getSTLColor(filename) {
+      const name = filename.toLowerCase();
+      if (name.includes('tumor') || name.includes('gtv') || name.includes('ctv')) return 0xff2244;
+      if (name.includes('bone') || name.includes('skull')) return 0xf0e0c0;
+      if (name.includes('air') || name.includes('sinus')) return 0x66ddff;
+      if (name.includes('skin') || name.includes('body')) return 0xffaa99;
+      if (name.includes('brain')) return 0xddaadd;
+      if (name.includes('tissue') || name.includes('soft')) return 0xff9988;
+      // Fallback: hash the filename to a deterministic color
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash) + name.charCodeAt(i);
+      return Math.abs(hash) & 0xffffff;
+    }
+ 
+    function getSTLOpacity(filename) {
+      const name = filename.toLowerCase();
+      if (name.includes('tumor')) return 0.85;
+      if (name.includes('skin') || name.includes('body')) return 0.2;
+      if (name.includes('bone')) return 0.4;
+      return 0.5;
+    }
+ 
+    async function handleSTLFiles(files) {
+      const promises = Array.from(files).map(loadSTL);
+      try {
+        const results = await Promise.all(promises);
+        for (const { name, geometry } of results) {
+          const color = getSTLColor(name);
+          const opacity = getSTLOpacity(name);
+          const mat = new THREE.MeshPhongMaterial({
+            color,
+            transparent: true,
+            opacity,
+            side: THREE.DoubleSide,
+            wireframe: wireframeMode
+          });
+          const mesh = new THREE.Mesh(geometry, mat);
+          mesh.name = name;
+          stlGroup.add(mesh);
+          stlMeshes[name] = mesh;
+        }
+        updateSTLList();
+        fitToView();
+      } catch (err) {
+        console.error('STL load error:', err);
+        alert('Error loading STL: ' + err.message);
+      }
+    }
+ 
+    function updateSTLList() {
+      const list = document.getElementById('stlList');
+      list.innerHTML = '';
+      const names = Object.keys(stlMeshes);
+      if (names.length === 0) {
+        list.style.display = 'none';
+        return;
+      }
+      list.style.display = 'block';
+      
+      for (const name of names) {
+        const mesh = stlMeshes[name];
+        const colorHex = '#' + mesh.material.color.getHexString();
+        const div = document.createElement('div');
+        div.className = 'stl-item';
+        div.innerHTML = `
+          <input type="checkbox" checked data-stl="${name}" />
+          <span class="color-swatch" style="background:${colorHex}"></span>
+          <span style="flex:1">${name}</span>
+        `;
+        div.querySelector('input').addEventListener('change', e => {
+          mesh.visible = e.target.checked;
+        });
+        list.appendChild(div);
+      }
+    }
+ 
+    function clearSTLs() {
+      while (stlGroup.children.length > 0) {
+        const m = stlGroup.children[0];
+        if (m.geometry) m.geometry.dispose();
+        if (m.material) m.material.dispose();
+        stlGroup.remove(m);
+      }
+      stlMeshes = {};
+      updateSTLList();
+    }
+ 
     function populateScene(result){
       for (let i=geometryGroup.children.length-1;i>=0;i--){ 
         geometryGroup.remove(geometryGroup.children[i]); 
       }
       
       parsedGeometry = result.geometry;
-      const { meshes, roots } = buildHierarchy(parsedGeometry);
+      parsedSources = result.sources || {};
       
+      const { meshes, roots } = buildHierarchy(parsedGeometry);
       roots.forEach(root => geometryGroup.add(root));
+      
+      // Draw beams (uses world-space transforms, separate from hierarchy)
+      drawBeams(parsedSources, parsedGeometry);
       
       const warnings = [...result.warnings];
       checkHierarchyOverlaps(parsedGeometry, meshes, warnings);
       
       applyWireframe();
-      fitToView();
       
       return { warnings, errors: result.errors };
     }
-
+ 
     function renderWarnings(warns, errs){
       const el = document.getElementById('warnings');
       el.innerHTML = '';
@@ -726,10 +958,16 @@ s:Ge/InnerBox/Material = "Aluminum"
         el.appendChild(d); 
       });
     }
-
+ 
     function fitToView(){
-      if (geometryGroup.children.length===0) return;
-      const box = new THREE.Box3().setFromObject(geometryGroup);
+      // Combine all groups for fit
+      const all = new THREE.Group();
+      geometryGroup.children.forEach(c => all.add(c.clone()));
+      stlGroup.children.forEach(c => all.add(c.clone()));
+      beamGroup.children.forEach(c => all.add(c.clone()));
+      
+      if (all.children.length === 0) return;
+      const box = new THREE.Box3().setFromObject(all);
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
@@ -739,9 +977,13 @@ s:Ge/InnerBox/Material = "Aluminum"
       controls.target.copy(center); 
       controls.update();
     }
-
+ 
     function setNamedView(name){
-      const box = new THREE.Box3().setFromObject(geometryGroup);
+      const all = new THREE.Group();
+      geometryGroup.children.forEach(c => all.add(c.clone()));
+      stlGroup.children.forEach(c => all.add(c.clone()));
+      
+      const box = new THREE.Box3().setFromObject(all.children.length > 0 ? all : geometryGroup);
       const center = box.getCenter(new THREE.Vector3());
       const size = box.getSize(new THREE.Vector3());
       const d = Math.max(size.x, size.y, size.z) * 1.4 + 1;
@@ -754,7 +996,7 @@ s:Ge/InnerBox/Material = "Aluminum"
       controls.target.copy(center); 
       controls.update();
     }
-
+ 
     function applyWireframe(){ 
       geometryGroup.traverse(o=>{
         if (o.isMesh){ 
@@ -762,9 +1004,15 @@ s:Ge/InnerBox/Material = "Aluminum"
           o.material.opacity = currentOpacity; 
           o.material.needsUpdate = true; 
         } 
-      }); 
+      });
+      stlGroup.traverse(o => {
+        if (o.isMesh) {
+          o.material.wireframe = wireframeMode;
+          o.material.needsUpdate = true;
+        }
+      });
     }
-
+ 
     function debounce(fn, ms){ 
       let t; 
       return (...args)=>{
@@ -772,14 +1020,14 @@ s:Ge/InnerBox/Material = "Aluminum"
         t=setTimeout(()=>fn.apply(null,args), ms); 
       }; 
     }
-
+ 
     function updateGeometry(){
       const text = editor.getValue();
       const result = parseTopasGeometry(text);
       const sceneResult = populateScene(result);
       renderWarnings(sceneResult.warnings, sceneResult.errors);
     }
-
+ 
     window.addEventListener('load', ()=>{
       initThree();
       initEditor();
@@ -804,6 +1052,21 @@ s:Ge/InnerBox/Material = "Aluminum"
         currentOpacity = parseFloat(e.target.value); 
         applyWireframe(); 
       };
+      document.getElementById('beamRadius').oninput = (e) => {
+        currentBeamRadius = parseFloat(e.target.value) || 30;
+        drawBeams(parsedSources, parsedGeometry);
+      };
+      
+      document.getElementById('btnLoadSTL').onclick = () => {
+        document.getElementById('stlFileInput').click();
+      };
+      document.getElementById('stlFileInput').onchange = (e) => {
+        if (e.target.files.length > 0) {
+          handleSTLFiles(e.target.files);
+        }
+        e.target.value = '';  // allow re-loading same file
+      };
+      document.getElementById('btnClearSTL').onclick = clearSTLs;
       
       document.querySelectorAll('.controls [data-view]').forEach(btn=>
         btn.addEventListener('click', ()=> setNamedView(btn.getAttribute('data-view')))
