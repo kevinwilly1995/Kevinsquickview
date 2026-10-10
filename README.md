@@ -104,7 +104,7 @@ If you use Kevin's Quick View in your research, please cite:
   title        = {Kevin's Quick View: Interactive Geometry Viewer for TOPAS},
   year         = 2025,
   publisher    = {Zenodo},
-  doi          = pending
+  doi          = https://doi.org/10.5281/zenodo.20511964
   url          = {https://github.com/kevinwilly1995/kevinsquickview}
 }
 ```
