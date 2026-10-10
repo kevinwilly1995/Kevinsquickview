@@ -35,8 +35,11 @@ Kevin's Quick View provides instant visual feedback:
 -  Overlap error detection
 -  Parent-daughter error detection
 -  Interactive camera controls (rotate, zoom, pan)
--  Support for multiple geometry types (boxes, cylinders, spheres, cones)
+-  All TOPAS solids (TsBox, TsCylinder, TsSphere and every G4 solid) plus TsCAD/STL import
+-  Source display: Beam, PhaseSpace, Emittance, Isotropic, Distributed, Volumetric and Environment
+-  "+ Add" templates and a click-a-line menu that writes in missing parameters
 -  Color-coded components
+-  Companion viewers for GAMOS (`gamos.html`: Geant4 text geometry + `/gamos/generator` sources) and plain Geant4 (`geant4.html`: GDML + `/gps` General Particle Source), switchable from the buttons at the top of each page
 -  Runs entirely in browser (no installation required)
 -  Works offline after initial load
 -  Zero bandwidth usage during interaction
@@ -48,7 +51,7 @@ Kevin's Quick View provides instant visual feedback:
 1. **Access the tool:**
    - Download `KEVINSQUICKVIEW.html`
    - Open it in any modern web browser
-   - Or visit the hosted version: [URL will be added after deployment]
+   - Or visit the hosted version: https://kevinsquickview.com
 
 2. **Paste your TOPAS geometry parameters:**
    - Copy your geometry definitions from your TOPAS input file

@@ -1,0 +1,2757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kevin's Quick View GAMOS</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <style>
+    :root {
+      --bg: #424141;
+      --panel: #343434;
+      --panel-2: #242424;
+      --muted: #676767;
+      --text: #F7F7F7;
+      --brand: #00693E;
+      --brand-2: #12312B;
+      --ok: #4caf50;
+      --warn: #FFA00F;
+      --err: #9D162E;
+      --scorer-highlight: #00ffcc;
+    }
+    html, body { height: 100%; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; overflow: hidden; }
+    .container { display: grid; grid-template-columns: 42% 58%; height: 100vh; }
+    .input-panel { border-right: 1px solid #303030; display: grid; grid-template-rows: auto 1fr auto auto; background: var(--panel); }
+    .viewer-panel { position: relative; background: var(--bg); }
+    .header { background: var(--brand); padding: 12px 16px; font-weight: 700; letter-spacing: .2px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .format-nav { display: flex; gap: 4px; }
+    .format-nav a { color: #fff; text-decoration: none; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,.4); }
+    .format-nav a:hover { background: rgba(255,255,255,.15); }
+    .format-nav a.active { background: #fff; color: var(--brand); border-color: #fff; }
+    .subheader { display:flex; gap:8px; align-items:center; padding: 8px 12px; background: var(--panel-2); border-bottom:1px solid #303030; flex-wrap: wrap; }
+    .subheader select, .subheader input[type="range"], .subheader button { background:#1a1a1a; border:1px solid #333; color:var(--text); border-radius:6px; padding:6px 10px; font-size:12px; }
+    .editor { height: 100%; }
+    .controls { padding: 10px 12px; background: var(--panel-2); border-top: 1px solid #303030; display:flex; flex-wrap:wrap; gap:8px; align-items: center; }
+    .btn { background: var(--brand); border: none; color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight:600; font-size: 12px; }
+    .btn.secondary { background: #2d2d2d; border:1px solid #3a3a3a; color:#ddd; }
+    .btn:hover { background: var(--brand-2); }
+    .btn.secondary:hover { background: #3a3a3a; }
+    .warnings-panel { padding: 10px 12px; background: var(--panel); border-top: 1px solid #303030; max-height: 180px; overflow: auto; }
+    .pill { display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:600; padding: 6px 10px; border-radius: 999px; margin: 4px 6px 0 0; }
+    .ok { background: rgba(76,175,80,.15); color: #8be28b; border:1px solid rgba(76,175,80,.35); }
+    .warn { background: rgba(255,152,0,.15); color: #ffbd5a; border:1px solid rgba(255,152,0,.35); }
+    .err { background: rgba(244,67,54,.15); color: #ff8a80; border:1px solid rgba(244,67,54,.35); }
+    .logline { font-size: 12px; margin:6px 0; padding:6px 8px; border-radius:6px; border:1px solid #333; background:#171717; }
+    .viewer-controls { position: absolute; top: 10px; right: 10px; display:flex; flex-direction:column; gap:6px; z-index:10; }
+    .viewer-controls .btn { padding:6px 10px; font-size:12px; }
+    #viewer { width:100%; height:100%; display:block; }
+    .legend { position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.7); backdrop-filter: blur(3px); border:1px solid #333; border-radius:8px; padding:8px 10px; font-size:11px; }
+    .badge { display:inline-block; padding:2px 6px; font-size:10px; border-radius:999px; border:1px solid #333; background:#151515; color:#bbb; }
+    .cm-error-line { background: rgba(244,67,54,.15) !important; }
+    #stlFileInput { display: none; }
+    .stl-list { padding: 6px 12px; background: var(--panel-2); border-top: 1px solid #303030; font-size: 11px; max-height: 80px; overflow: auto; }
+    .stl-item { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+    .stl-item input[type="checkbox"] { accent-color: var(--brand); }
+    .stl-placed { color: #8be28b; }
+    .stl-unplaced { color: #ffbd5a; }
+    .color-swatch { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #555; display: inline-block; }
+    .param-menu { position: fixed; z-index: 50; display: none; background: #1a1a1a; border: 1px solid #3a3a3a; border-radius: 8px; padding: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.5); font-size: 12px; }
+    .param-menu .title { color: #bbb; padding: 2px 4px 6px; }
+    .param-menu select { background: #111; color: var(--text); border: 1px solid #333; border-radius: 6px; font-size: 12px; min-width: 240px; outline: none; }
+    .param-menu optgroup { color: #8be28b; font-style: normal; }
+    .param-menu option { color: var(--text); padding: 2px 4px; }
+  
+    .tabs { display: flex; gap: 4px; padding: 6px 12px 0; background: var(--panel-2); }
+    .tab { background: #1a1a1a; border: 1px solid #333; border-bottom: none; color: #bbb; padding: 6px 12px; border-radius: 6px 6px 0 0; font-size: 12px; cursor: pointer; }
+    .tab.active { background: #212121; color: var(--text); border-color: #444; }
+  </style>
+</head>
+<body>
+  <div class="container">
+   <div class="input-panel" style="display: flex; flex-direction: column; height: 100vh;">
+      <div class="header" style="background: #00693E;">
+        <span>Kevin's Quick View for GAMOS</span>
+        <nav class="format-nav"><a href="index.html">TOPAS</a><a href="gamos.html" class="active">GAMOS</a><a href="geant4.html">Geant4</a></nav>
+      </div>
+      <div class="subheader" style="overflow:hidden">
+        <button class="btn" id="btnUpdate">Update Geometry</button>
+        <button class="btn secondary" id="btnOpen">Open File</button>
+        <button class="btn secondary" id="btnDownload">Save File</button>
+        <button class="btn secondary" id="btnFit">Fit to View</button>
+        <button class="btn secondary" id="btnReset">Reset Camera</button>
+        <button class="btn secondary" id="btnWire">Wireframe</button>
+        <button class="btn secondary" id="btnAxes">Axes</button>
+        <button class="btn secondary" id="btnLoadSTL">Load STL(s)</button>
+        <button class="btn secondary" id="btnClearSTL">Clear STLs</button>
+        <select id="shapeInsert" title="Append a solid or a source with all of its parameters"><option value="">+ Add</option></select>
+        <label class="badge" title="How placement rotations are applied">Rotations
+          <select id="rotConv">
+            <option value="g4">Geant4 (frame)</option>
+            <option value="active">Active</option>
+          </select>
+        </label>
+        <label class="badge">Opacity <input id="opacity" type="range" min="0.05" max="1" step="0.05" value="0.7" style="accent-color: #12312B;" /></label>
+        <input type="file" id="stlFileInput" multiple accept=".stl" />
+        <input type="file" id="openFileInput" accept=".geom,.txt,.tg,.in,.mac" style="display:none" />
+      </div>
+      <div class="stl-list" id="stlList"></div>
+      <div class="tabs">
+        <button class="tab active" data-tab="geom">Geometry (.geom)</button>
+        <button class="tab" data-tab="macro">Macro (.in)</button>
+      </div>
+      <div class="editor" id="editorGeom" style="flex: 1; min-height: 0; height: 100%;"></div>
+      <div class="editor" id="editorMacro" style="flex: 1; min-height: 0; height: 100%; display: none;"></div>
+      <div class="controls">
+        <span class="badge">Views:</span>
+        <button class="btn secondary" data-view="iso">Isometric</button>
+        <button class="btn secondary" data-view="top">Top</button>
+        <button class="btn secondary" data-view="front">Front</button>
+        <button class="btn secondary" data-view="right">Right</button>
+        <span id="scorerIndicator" class="badge" style="display: none;"></span>
+     </div>
+     <div class="warnings-panel" id="warnings" style="flex-shrink: 0; max-height: 200px; overflow: auto;"></div>
+    </div>
+
+    <div class="viewer-panel">
+      <div style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10; padding: 8px 16px; border-radius: 4px; font-size: 12px; text-align: center; line-height: 1.4;">
+        Kevin Willy, Dartmouth College
+      </div>
+      <canvas id="viewer"></canvas>
+      <div class="legend">Scroll: zoom • Drag: orbit • Right-drag: pan • Axes: X red, Y green, Z blue (Z up)</div>
+    </div>
+  </div>
+  <div class="param-menu" id="paramMenu">
+    <div class="title" id="paramMenuTitle"></div>
+    <select id="paramMenuList"></select>
+  </div>
+
+  <script>
+    let scene, camera, renderer, controls, axesHelper;
+    // Everything TOPAS (components, beams, STLs, axes) lives in topasRoot and is built in
+    // TOPAS coordinates (mm, right-handed). topasRoot only turns TOPAS +Z to screen-up.
+    let topasRoot = new THREE.Group();
+    let geometryGroup = new THREE.Group();
+    let beamGroup = new THREE.Group();
+    let stlGroup = new THREE.Group();
+    let scorerGroup = new THREE.Group();  // BoxHelpers are in world coordinates, so they sit outside topasRoot
+    let stlMeshes = {};
+    let wireframeMode = false;
+    let showAxes = true;
+    let currentBeamRadius = 30;
+    let rotConvention = 'g4';
+
+    class SimpleOrbitControls {
+      constructor(camera, domElement) {
+        this.camera = camera;
+        this.domElement = domElement;
+        this.target = new THREE.Vector3();
+        this.enabled = true;
+        this.rotateSpeed = 1.0;
+        this.zoomSpeed = 1.0;
+        this.panSpeed = 1.0;
+        this.minDistance = 0;
+        this.maxDistance = Infinity;
+        this.spherical = new THREE.Spherical();
+        this.sphericalDelta = new THREE.Spherical();
+        this.scale = 1;
+        this.panOffset = new THREE.Vector3();
+        this.rotateStart = new THREE.Vector2();
+        this.rotateEnd = new THREE.Vector2();
+        this.rotateDelta = new THREE.Vector2();
+        this.panStart = new THREE.Vector2();
+        this.panEnd = new THREE.Vector2();
+        this.panDelta = new THREE.Vector2();
+        this.zoomStart = new THREE.Vector2();
+        this.zoomEnd = new THREE.Vector2();
+        this.zoomDelta = new THREE.Vector2();
+        this.state = 'NONE';
+        this.setupEventListeners();
+        this.update();
+      }
+
+      setupEventListeners() {
+        this.domElement.addEventListener('mousedown', this.onMouseDown.bind(this));
+        this.domElement.addEventListener('wheel', this.onMouseWheel.bind(this));
+        this.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+        document.addEventListener('mousemove', this.onMouseMove.bind(this));
+        document.addEventListener('mouseup', this.onMouseUp.bind(this));
+      }
+
+      onMouseDown(event) {
+        if (!this.enabled) return;
+        event.preventDefault();
+        if (event.button === 0) {
+          this.state = 'ROTATE';
+          this.rotateStart.set(event.clientX, event.clientY);
+        } else if (event.button === 2) {
+          this.state = 'PAN';
+          this.panStart.set(event.clientX, event.clientY);
+        }
+      }
+
+      onMouseMove(event) {
+        if (!this.enabled) return;
+        event.preventDefault();
+        if (this.state === 'ROTATE') {
+          this.rotateEnd.set(event.clientX, event.clientY);
+          this.rotateDelta.subVectors(this.rotateEnd, this.rotateStart).multiplyScalar(this.rotateSpeed);
+          this.rotateLeft(2 * Math.PI * this.rotateDelta.x / this.domElement.clientWidth);
+          this.rotateUp(2 * Math.PI * this.rotateDelta.y / this.domElement.clientHeight);
+          this.rotateStart.copy(this.rotateEnd);
+          this.update();
+        } else if (this.state === 'PAN') {
+          this.panEnd.set(event.clientX, event.clientY);
+          this.panDelta.subVectors(this.panEnd, this.panStart).multiplyScalar(this.panSpeed);
+          this.pan(this.panDelta.x, this.panDelta.y);
+          this.panStart.copy(this.panEnd);
+          this.update();
+        }
+      }
+
+      onMouseUp(event) {
+        if (!this.enabled) return;
+        this.state = 'NONE';
+      }
+
+      onMouseWheel(event) {
+        if (!this.enabled) return;
+        event.preventDefault();
+        if (event.deltaY < 0) {
+          this.dollyIn(this.getZoomScale());
+        } else {
+          this.dollyOut(this.getZoomScale());
+        }
+        this.update();
+      }
+
+      rotateLeft(angle) { this.sphericalDelta.theta -= angle; }
+      rotateUp(angle) { this.sphericalDelta.phi -= angle; }
+
+      pan(deltaX, deltaY) {
+        const offset = new THREE.Vector3();
+        const position = this.camera.position;
+        offset.copy(position).sub(this.target);
+        let targetDistance = offset.length();
+        targetDistance *= Math.tan((this.camera.fov / 2) * Math.PI / 180.0);
+        this.panLeft(2 * deltaX * targetDistance / this.domElement.clientHeight, this.camera.matrix);
+        this.panUp(2 * deltaY * targetDistance / this.domElement.clientHeight, this.camera.matrix);
+      }
+
+      panLeft(distance, objectMatrix) {
+        const v = new THREE.Vector3();
+        v.setFromMatrixColumn(objectMatrix, 0);
+        v.multiplyScalar(-distance);
+        this.panOffset.add(v);
+      }
+
+      panUp(distance, objectMatrix) {
+        const v = new THREE.Vector3();
+        v.setFromMatrixColumn(objectMatrix, 1);
+        v.multiplyScalar(distance);
+        this.panOffset.add(v);
+      }
+
+      dollyIn(dollyScale) { this.scale /= dollyScale; }
+      dollyOut(dollyScale) { this.scale *= dollyScale; }
+      getZoomScale() { return Math.pow(0.95, this.zoomSpeed); }
+
+      update() {
+        const offset = new THREE.Vector3();
+        const quat = new THREE.Quaternion().setFromUnitVectors(this.camera.up, new THREE.Vector3(0, 1, 0));
+        const quatInverse = quat.clone().conjugate();
+        const position = this.camera.position;
+        offset.copy(position).sub(this.target);
+        offset.applyQuaternion(quat);
+        this.spherical.setFromVector3(offset);
+        this.spherical.theta += this.sphericalDelta.theta;
+        this.spherical.phi += this.sphericalDelta.phi;
+        this.spherical.phi = Math.max(0.000001, Math.min(Math.PI - 0.000001, this.spherical.phi));
+        this.spherical.radius *= this.scale;
+        this.spherical.radius = Math.max(this.minDistance, Math.min(this.maxDistance, this.spherical.radius));
+        this.target.add(this.panOffset);
+        offset.setFromSpherical(this.spherical);
+        offset.applyQuaternion(quatInverse);
+        position.copy(this.target).add(offset);
+        this.camera.lookAt(this.target);
+        this.sphericalDelta.set(0, 0, 0);
+        this.scale = 1;
+        this.panOffset.set(0, 0, 0);
+        return true;
+      }
+    }
+
+    function initThree() {
+      const canvas = document.getElementById('viewer');
+      const rect = canvas.getBoundingClientRect();
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x121212);
+      camera = new THREE.PerspectiveCamera(60, rect.width/rect.height, 0.1, 50000);
+      camera.position.set(300, 240, 300);
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setSize(rect.width, rect.height);
+      const amb = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(amb);
+      const dir = new THREE.DirectionalLight(0xffffff, 0.7);
+      dir.position.set(200,200,100);
+      scene.add(dir);
+      controls = new SimpleOrbitControls(camera, canvas);
+
+      // TOPAS (x, y, z) -> screen (x, z, -y): a proper rotation, so handedness is kept
+      topasRoot.rotation.x = -Math.PI / 2;
+      scene.add(topasRoot);
+      scene.add(scorerGroup);
+
+      axesHelper = new THREE.Group();
+      axesHelper.add(new THREE.AxesHelper(100));
+      [['X', 0xff5555, [115, 0, 0]], ['Y', 0x55ff55, [0, 115, 0]], ['Z', 0x5599ff, [0, 0, 115]]].forEach(([t, c, p]) => {
+        const s = makeAxisLabel(t, c);
+        s.position.set(...p);
+        axesHelper.add(s);
+      });
+      axesHelper.visible = showAxes;
+      topasRoot.add(axesHelper);
+      topasRoot.add(geometryGroup);
+      topasRoot.add(beamGroup);
+      topasRoot.add(stlGroup);
+      window.addEventListener('resize', onResize);
+      animate();
+    }
+
+    function onResize(){
+      const canvas = document.getElementById('viewer');
+      const rect = canvas.getBoundingClientRect();
+      camera.aspect = rect.width/rect.height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(rect.width, rect.height);
+    }
+
+    function animate(){
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+
+    function colorNameToHex(colorName) {
+      const colorMap = {
+        'white': 0xffffff, 'black': 0x000000,
+        'red': 0xff0000, 'green': 0x00ff00, 'blue': 0x0000ff,
+        'yellow': 0xffff00, 'cyan': 0x00ffff, 'magenta': 0xff00ff,
+        'orange': 0xff8800, 'purple': 0x800080, 'pink': 0xffc0cb,
+        'brown': 0x8b4513, 'gray': 0x808080, 'grey': 0x808080,
+        'lightblue': 0xadd8e6, 'darkblue': 0x00008b,
+        'lightgreen': 0x90ee90, 'darkgreen': 0x006400,
+        'lightgray': 0xd3d3d3, 'darkgray': 0xa9a9a9,
+        'lightyellow': 0xffffe0, 'gold': 0xffd700,
+        'silver': 0xc0c0c0, 'bronze': 0xcd7f32,
+        'violet': 0xee82ee, 'indigo': 0x4b0082,
+        'turquoise': 0x40e0d0, 'lime': 0x00ff00,
+        'olive': 0x808000, 'navy': 0x000080,
+        'teal': 0x008080, 'maroon': 0x800000,
+        'skyblue': 0x87ceeb, 'grass': 0x7cfc00
+      };
+      const name = colorName.toLowerCase().trim();
+      if (userColors[name] !== undefined) return userColors[name];
+      return colorMap[name] !== undefined ? colorMap[name] : 0xffffff;
+    }
+
+    const materials = {
+      'Air': { color: 0x87ceeb, opacity: 0.15 },
+      'G4_AIR': { color: 0x87ceeb, opacity: 0.15 },
+      'Water': { color: 0x4169e1, opacity: 0.55 },
+      'G4_WATER': { color: 0x4169e1, opacity: 0.55 },
+      'Aluminum': { color: 0xc0c0c0, opacity: 0.8 },
+      'Lead': { color: 0x2f2f2f, opacity: 0.9 },
+      'Copper': { color: 0xb87333, opacity: 0.8 },
+      'Brass': { color: 0xb5a642, opacity: 0.8 },
+      'Steel': { color: 0x708090, opacity: 0.8 },
+      'G4_TISSUE_SOFT_ICRP': { color: 0xff9988, opacity: 0.5 },
+      'G4_BONE_CORTICAL_ICRP': { color: 0xf0e0c0, opacity: 0.6 },
+      'Default': { color: 0xffffff, opacity: 0.7 }
+    };
+
+    // ---------------------------------------------------------------------------------
+    // Shape construction. All builders return a BufferGeometry in the component's own
+    // TOPAS frame (mm), matching Geant4's solid definitions.
+    // ---------------------------------------------------------------------------------
+    const TWO_PI = Math.PI * 2;
+
+    // LatheGeometry revolves about +Y starting at +Z; this cyclic permutation (proper rotation)
+    // makes it revolve about TOPAS +Z starting at +X, so phi matches Geant4's SPhi/PhiStart.
+    const LATHE_TO_TOPAS = new THREE.Matrix4().set(0,0,1,0, 1,0,0,0, 0,1,0,0, 0,0,0,1);
+
+    function num(p, key, def) { return typeof p[key] === 'number' && !isNaN(p[key]) ? p[key] : def; }
+
+    function vec(p, key, def) { return Array.isArray(p[key]) ? p[key] : def; }
+
+    function trisGeometry(flat) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(flat, 3));
+      g.computeVertexNormals();
+      return g;
+    }
+
+    function mergeGeometries(pieces) {
+      const parts = pieces.filter(Boolean).map(g => {
+        g = g.index ? g.toNonIndexed() : g;
+        if (!g.getAttribute('normal')) g.computeVertexNormals();
+        return g;
+      });
+      let n = 0;
+      parts.forEach(g => n += g.getAttribute('position').count * 3);
+      const pos = new Float32Array(n), nor = new Float32Array(n);
+      let o = 0;
+      for (const g of parts) {
+        pos.set(g.getAttribute('position').array, o);
+        nor.set(g.getAttribute('normal').array, o);
+        o += g.getAttribute('position').count * 3;
+      }
+      const out = new THREE.BufferGeometry();
+      out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+      return out;
+    }
+
+    function flatNormals(g) {
+      g = g.index ? g.toNonIndexed() : g;
+      g.computeVertexNormals();
+      return g;
+    }
+
+    // closed polygon in (r, z) as sharp-edged 2-point chains
+    function polyLoop(pts) {
+      return pts.map((pt, i) => [pt, pts[(i + 1) % pts.length]]);
+    }
+
+    function loopPoints(loop) {
+      const pts = [];
+      for (const chain of loop) for (const pt of chain) {
+        const last = pts[pts.length - 1];
+        if (!last || Math.hypot(last[0] - pt[0], last[1] - pt[1]) > 1e-9) pts.push(pt);
+      }
+      if (pts.length > 1 && Math.hypot(pts[0][0] - pts[pts.length-1][0], pts[0][1] - pts[pts.length-1][1]) <= 1e-9) pts.pop();
+      return pts;
+    }
+
+    // flat cap of a partial revolution: the (r, z) profile placed in the half-plane at angle phi
+    function profileCap(loops, phi) {
+      const rings = loops.map(loopPoints).filter(r => r.length >= 3);
+      if (!rings.length) return null;
+      const contour = rings[0].map(([r, z]) => new THREE.Vector2(r, z));
+      const holes = rings.slice(1).map(r => r.map(([rr, z]) => new THREE.Vector2(rr, z)));
+      const faces = THREE.ShapeUtils.triangulateShape(contour, holes);
+      const all = contour.concat(...holes);
+      const c = Math.cos(phi), s = Math.sin(phi), tris = [];
+      for (const f of faces) for (const idx of f) tris.push(all[idx].x * c, all[idx].x * s, all[idx].y);
+      return trisGeometry(tris);
+    }
+
+    // Revolve (r, z) profile loops about Z from sPhi over dPhi. loops[0] is the outline,
+    // further loops are holes (used for the end caps of partial revolutions).
+    function revolve(loops, sPhi = 0, dPhi = TWO_PI, segments = null) {
+      const full = dPhi >= TWO_PI - 1e-9;
+      if (full) { sPhi = 0; dPhi = TWO_PI; }
+      const n = segments || Math.max(6, Math.ceil(64 * dPhi / TWO_PI));
+      const pieces = [];
+      for (const loop of loops) for (const chain of loop) {
+        if (chain.length < 2 || chain.every(([r]) => r <= 1e-9)) continue;
+        const g = new THREE.LatheGeometry(chain.map(([r, z]) => new THREE.Vector2(Math.max(r, 0), z)), n, sPhi, dPhi);
+        g.applyMatrix4(LATHE_TO_TOPAS);
+        pieces.push(g);
+      }
+      if (!full) pieces.push(profileCap(loops, sPhi), profileCap(loops, sPhi + dPhi));
+      return mergeGeometries(pieces);
+    }
+
+    function arcPts(R, a0, a1, cz = 0) {
+      const n = Math.max(8, Math.ceil(48 * Math.abs(a1 - a0) / Math.PI));
+      const pts = [];
+      for (let i = 0; i <= n; i++) {
+        const a = a0 + (a1 - a0) * i / n;
+        pts.push([R * Math.sin(a), cz + R * Math.cos(a)]);  // theta measured from +Z
+      }
+      return pts;
+    }
+
+    function curvePts(fn, z0, z1, n = 32) {
+      const pts = [];
+      for (let i = 0; i <= n; i++) { const z = z0 + (z1 - z0) * i / n; pts.push([fn(z), z]); }
+      return pts;
+    }
+
+    function cylinderLoop(rMin, rMax, hl) {
+      return polyLoop([[rMin, -hl], [rMax, -hl], [rMax, hl], [rMin, hl]]);
+    }
+
+    function sphereLoop(rMin, rMax, t0, t1) {
+      const outer = arcPts(rMax, t0, t1);
+      const inner = rMin > 0 ? arcPts(rMin, t1, t0) : [[0, 0]];
+      return [outer, [outer[outer.length - 1], inner[0]], inner, [inner[inner.length - 1], outer[0]]];
+    }
+
+    // Side quads between consecutive closed sections (arrays of [x, y, z]) plus flat end caps
+    function loft(sections) {
+      const tris = [];
+      const push = (...pts) => pts.forEach(q => tris.push(q[0], q[1], q[2]));
+      for (let s = 0; s < sections.length - 1; s++) {
+        const a = sections[s], b = sections[s + 1], n = a.length;
+        for (let i = 0; i < n; i++) {
+          const j = (i + 1) % n;
+          push(a[i], a[j], b[j], a[i], b[j], b[i]);
+        }
+      }
+      for (const sec of [sections[0], sections[sections.length - 1]]) {
+        const contour = sec.map(q => new THREE.Vector2(q[0], q[1]));
+        const faces = THREE.ShapeUtils.triangulateShape(contour, []);
+        for (const f of faces) push(sec[f[0]], sec[f[1]], sec[f[2]]);
+      }
+      return trisGeometry(tris);
+    }
+
+    const lerp3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
+    function linearLoft(bottom, top, steps = 1) {
+      const sections = [];
+      for (let k = 0; k <= steps; k++) sections.push(bottom.map((b, i) => lerp3(b, top[i], k / steps)));
+      return loft(sections);
+    }
+
+    // Geant4 G4Trap corners: [bottom(-dz), top(+dz)], each ordered (-x,-y) (+x,-y) (+x,+y) (-x,+y)
+    function trapCorners(dz, theta, phi, dy1, dx1, dx2, alp1, dy2, dx3, dx4, alp2) {
+      const tc = Math.tan(theta) * Math.cos(phi), ts = Math.tan(theta) * Math.sin(phi);
+      const ta1 = Math.tan(alp1), ta2 = Math.tan(alp2);
+      const face = (z, dy, dxLow, dxHigh, ta) => [
+        [z * tc - dy * ta - dxLow,  z * ts - dy, z],
+        [z * tc - dy * ta + dxLow,  z * ts - dy, z],
+        [z * tc + dy * ta + dxHigh, z * ts + dy, z],
+        [z * tc + dy * ta - dxHigh, z * ts + dy, z]];
+      return { bottom: face(-dz, dy1, dx1, dx2, ta1), top: face(dz, dy2, dx3, dx4, ta2), tc, ts };
+    }
+
+    // Twisted solids: the section rotates linearly with z (-twist/2 at -dz to +twist/2 at +dz)
+    // about the solid's axis, which leans by theta/phi
+    function twistedLoft({ bottom, top, tc, ts }, twist, steps = 24) {
+      const sections = [];
+      for (let k = 0; k <= steps; k++) {
+        const t = k / steps, ang = (t - 0.5) * twist, c = Math.cos(ang), s = Math.sin(ang);
+        sections.push(bottom.map((b, i) => {
+          const q = lerp3(b, top[i], t), cx = q[2] * tc, cy = q[2] * ts;
+          const dx = q[0] - cx, dy = q[1] - cy;
+          return [cx + dx * c - dy * s, cy + dx * s + dy * c, q[2]];
+        }));
+      }
+      return loft(sections);
+    }
+
+    const D = Math.PI / 180;
+
+    const SHAPES = {
+      TsBox: {
+        req: ['HLX', 'HLY', 'HLZ'],
+        tpl: ['d:HLX = 30 mm', 'd:HLY = 40 mm', 'd:HLZ = 60 mm'],
+        build: p => new THREE.BoxGeometry(2 * p.HLX, 2 * p.HLY, 2 * p.HLZ)
+      },
+      TsCylinder: {
+        req: ['RMax', 'HL'],
+        tpl: ['d:RMin = 0 mm', 'd:RMax = 15 mm', 'd:HL = 20 mm', 'd:SPhi = 0 deg', 'd:DPhi = 360 deg'],
+        build: p => revolve([cylinderLoop(num(p, 'RMin', 0), p.RMax, p.HL)], num(p, 'SPhi', 0), num(p, 'DPhi', TWO_PI))
+      },
+      TsSphere: {
+        req: ['RMax'],
+        tpl: ['d:RMin = 0 mm', 'd:RMax = 50 mm', 'd:SPhi = 0 deg', 'd:DPhi = 360 deg', 'd:STheta = 0 deg', 'd:DTheta = 180 deg'],
+        build: p => {
+          const t0 = num(p, 'STheta', 0), t1 = Math.min(Math.PI, t0 + num(p, 'DTheta', Math.PI));
+          return revolve([sphereLoop(num(p, 'RMin', 0), p.RMax, t0, t1)], num(p, 'SPhi', 0), num(p, 'DPhi', TWO_PI));
+        }
+      },
+      G4Orb: {
+        req: ['R'],
+        tpl: ['d:R = 50 mm'],
+        build: p => new THREE.SphereGeometry(p.R, 48, 32)
+      },
+      G4Cons: {
+        req: ['RMax1', 'RMax2', 'HL'],
+        tpl: ['d:RMin1 = 5 mm', 'd:RMax1 = 10 mm', 'd:RMin2 = 20 mm', 'd:RMax2 = 25 mm', 'd:HL = 40 mm', 'd:SPhi = 0 deg', 'd:DPhi = 360 deg'],
+        build: p => revolve([polyLoop([[num(p, 'RMin1', 0), -p.HL], [p.RMax1, -p.HL], [p.RMax2, p.HL], [num(p, 'RMin2', 0), p.HL]])],
+                            num(p, 'SPhi', 0), num(p, 'DPhi', TWO_PI))
+      },
+      G4CutTubs: {
+        req: ['RMax', 'HL'],
+        tpl: ['d:RMin = 12 mm', 'd:RMax = 20 mm', 'd:HL = 30 mm', 'd:SPhi = 0 deg', 'd:DPhi = 360 deg',
+              'uv:LowNorm = 3 0. -0.7 -0.71', 'uv:HighNorm = 3 0.7 0. 0.71'],
+        build: p => {
+          const g = revolve([cylinderLoop(num(p, 'RMin', 0), p.RMax, p.HL)], num(p, 'SPhi', 0), num(p, 'DPhi', TWO_PI));
+          const lo = vec(p, 'LowNorm', [0, 0, -1]), hi = vec(p, 'HighNorm', [0, 0, 1]);
+          const pos = g.getAttribute('position');
+          for (let i = 0; i < pos.count; i++) {
+            const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+            const n = z > 0 ? hi : lo, z0 = z > 0 ? p.HL : -p.HL;
+            if (Math.abs(n[2]) > 1e-9) pos.setZ(i, z0 - (n[0] * x + n[1] * y) / n[2]);  // point on the cut plane
+          }
+          return flatNormals(g);
+        }
+      },
+      G4Para: {
+        req: ['HLX', 'HLY', 'HLZ'],
+        tpl: ['d:HLX = 30 mm', 'd:HLY = 40 mm', 'd:HLZ = 60 mm', 'd:Alpha = 17 deg', 'd:Theta = 0 deg', 'd:Phi = 0 deg'],
+        build: p => {
+          const a = num(p, 'Alpha', 0), c = trapCorners(p.HLZ, num(p, 'Theta', 0), num(p, 'Phi', 0), p.HLY, p.HLX, p.HLX, a, p.HLY, p.HLX, p.HLX, a);
+          return linearLoft(c.bottom, c.top);
+        }
+      },
+      G4Trd: {
+        req: ['HLX1', 'HLX2', 'HLY1', 'HLY2', 'HLZ'],
+        tpl: ['d:HLX1 = 30 mm', 'd:HLX2 = 10 mm', 'd:HLY1 = 40 mm', 'd:HLY2 = 15 mm', 'd:HLZ = 60 mm'],
+        build: p => {
+          const c = trapCorners(p.HLZ, 0, 0, p.HLY1, p.HLX1, p.HLX1, 0, p.HLY2, p.HLX2, p.HLX2, 0);
+          return linearLoft(c.bottom, c.top);
+        }
+      },
+      G4RTrap: {  // right angular wedge: full lengths, LTX = x length at +y
+        req: ['LZ', 'LY', 'LX', 'LTX'],
+        tpl: ['d:LZ = 120 mm', 'd:LY = 80 mm', 'd:LX = 60 mm', 'd:LTX = 30 mm'],
+        build: p => {
+          const alpha = Math.atan(0.5 * (p.LTX - p.LX) / p.LY);
+          const c = trapCorners(p.LZ / 2, 0, 0, p.LY / 2, p.LX / 2, p.LTX / 2, alpha, p.LY / 2, p.LX / 2, p.LTX / 2, alpha);
+          return linearLoft(c.bottom, c.top);
+        }
+      },
+      G4GTrap: {
+        req: ['HLZ', 'HLY1', 'HLX1', 'HLX2', 'HLY2', 'HLX3', 'HLX4'],
+        tpl: ['d:HLZ = 60 mm', 'd:Theta = 20 deg', 'd:Phi = 5 deg', 'd:HLY1 = 40 mm', 'd:HLX1 = 30 mm', 'd:HLX2 = 40 mm',
+              'd:Alp1 = 10 deg', 'd:HLY2 = 16 mm', 'd:HLX3 = 10 mm', 'd:HLX4 = 14 mm', 'd:Alp2 = 10 deg'],
+        build: p => {
+          const c = trapCorners(p.HLZ, num(p, 'Theta', 0), num(p, 'Phi', 0), p.HLY1, p.HLX1, p.HLX2, num(p, 'Alp1', 0),
+                                p.HLY2, p.HLX3, p.HLX4, num(p, 'Alp2', 0));
+          return linearLoft(c.bottom, c.top);
+        }
+      },
+      G4Torus: {
+        req: ['RMax', 'RTor'],
+        tpl: ['d:RMin = 40 mm', 'd:RMax = 60 mm', 'd:RTor = 200 mm', 'd:SPhi = 0 deg', 'd:DPhi = 360 deg'],
+        build: p => {
+          const circle = r => [Array.from({ length: 49 }, (_, i) => {
+            const a = TWO_PI * i / 48;
+            return [p.RTor + r * Math.cos(a), r * Math.sin(a)];
+          })];
+          const loops = [circle(p.RMax)];
+          if (num(p, 'RMin', 0) > 0) loops.push(circle(p.RMin));
+          return revolve(loops, num(p, 'SPhi', 0), num(p, 'DPhi', TWO_PI));
+        }
+      },
+      G4HPolycone: {  // z planes with inner and outer radii
+        req: ['RInner', 'ROuter', 'Z'],
+        tpl: ['d:PhiStart = 0 deg', 'd:PhiTotal = 360 deg', 'dv:RInner = 9 0 1. 1. 1. 2. 2. 3. .5 .2 mm',
+              'dv:ROuter = 9 0 10 10 5 5 10 10 2 2 mm', 'dv:Z = 9 5 7 9 11 25 27 29 31 35 mm'],
+        build: p => {
+          const n = Math.min(p.RInner.length, p.ROuter.length, p.Z.length);
+          const outer = p.Z.slice(0, n).map((z, i) => [p.ROuter[i], z]);
+          const inner = p.Z.slice(0, n).map((z, i) => [p.RInner[i], z]).reverse();
+          return revolve([polyLoop(outer.concat(inner))], num(p, 'PhiStart', 0), num(p, 'PhiTotal', TWO_PI));
+        }
+      },
+      G4SPolycone: {  // (R, Z) corners of the outline
+        req: ['R', 'Z'],
+        tpl: ['d:PhiStart = 0 deg', 'd:PhiTotal = 360 deg', 'dv:R = 10 0 10 10 5 5 10 10 2 2 0 mm',
+              'dv:Z = 10 5 7 9 11 25 27 29 31 35 35 mm'],
+        build: p => revolve([polyLoop(p.Z.slice(0, p.R.length).map((z, i) => [p.R[i], z]))],
+                            num(p, 'PhiStart', 0), num(p, 'PhiTotal', TWO_PI))
+      },
+      G4GenericPolycone: {
+        req: ['R', 'Z'],
+        tpl: ['d:PhiStart = 0 deg', 'd:PhiTotal = 360 deg', 'dv:R = 10 0 10 10 5 5 10 10 2 2 0 mm',
+              'dv:Z = 10 5 7 9 11 25 27 29 31 35 35 mm'],
+        build: p => SHAPES.G4SPolycone.build(p)
+      },
+      G4HPolyhedra: {  // z planes; Geant4 radii are distances to the side faces, not to the corners
+        req: ['NSides', 'Z', 'RInner', 'ROuter'],
+        tpl: ['d:PhiStart = 0 deg', 'd:PhiTotal = 360 deg', 'i:NSides = 6', 'dv:Z = 7 0 5 8 13 30 32 35 mm',
+              'dv:RInner = 7 0 2 2 3 1 1 2 mm', 'dv:ROuter = 7 0 15 15 4 4 10 10 mm'],
+        build: p => {
+          const N = Math.max(1, Math.round(p.NSides)), dPhi = num(p, 'PhiTotal', TWO_PI);
+          const k = 1 / Math.cos(dPhi / (2 * N));
+          const n = Math.min(p.RInner.length, p.ROuter.length, p.Z.length);
+          const outer = p.Z.slice(0, n).map((z, i) => [p.ROuter[i] * k, z]);
+          const inner = p.Z.slice(0, n).map((z, i) => [p.RInner[i] * k, z]).reverse();
+          return flatNormals(revolve([polyLoop(outer.concat(inner))], num(p, 'PhiStart', 0), dPhi, N));
+        }
+      },
+      G4SPolyhedra: {  // (R, Z) corners
+        req: ['NSides', 'R', 'Z'],
+        tpl: ['d:PhiStart = 0 deg', 'd:PhiTotal = 360 deg', 'i:NSides = 6', 'dv:R = 5 0 4 12 8 0 mm', 'dv:Z = 5 0 0 8 16 16 mm'],
+        build: p => flatNormals(revolve([polyLoop(p.Z.slice(0, p.R.length).map((z, i) => [p.R[i], z]))],
+                                        num(p, 'PhiStart', 0), num(p, 'PhiTotal', TWO_PI), Math.max(1, Math.round(p.NSides))))
+      },
+      G4EllipticalTube: {
+        req: ['HLX', 'HLY', 'HLZ'],
+        tpl: ['d:HLX = 5 mm', 'd:HLY = 10 mm', 'd:HLZ = 20 mm'],
+        build: p => revolve([cylinderLoop(0, 1, p.HLZ)]).scale(p.HLX, p.HLY, 1)
+      },
+      G4Ellipsoid: {  // semi-axes HLX/HLY/HLZ, optional flat cuts at ZBottom/ZTop
+        req: ['HLX', 'HLY', 'HLZ'],
+        tpl: ['d:HLX = 10 mm', 'd:HLY = 20 mm', 'd:HLZ = 50 mm', 'd:ZBottom = -10 mm', 'd:ZTop = 40 mm'],
+        build: p => {
+          const c = p.HLZ;
+          const zt = num(p, 'ZTop', 0) !== 0 ? Math.min(p.ZTop, c) : c;
+          const zb = num(p, 'ZBottom', 0) !== 0 ? Math.max(p.ZBottom, -c) : -c;
+          const arc = arcPts(c, Math.acos(zt / c), Math.acos(zb / c));
+          const loop = [[[0, zt], arc[0]], arc, [arc[arc.length - 1], [0, zb]]];
+          return revolve([loop]).scale(p.HLX / c, p.HLY / c, 1);
+        }
+      },
+      G4EllipticalCone: {  // (x/HLX)^2 + (y/HLY)^2 = (ZMax - z)^2, cut at |z| <= ZTop; HLX/HLY are slopes
+        req: ['HLX', 'HLY', 'ZMax', 'ZTop'],
+        tpl: ['d:HLX = .4 mm', 'd:HLY = .8 mm', 'd:ZMax = 50 mm', 'd:ZTop = 25 mm'],
+        build: p => {
+          const zt = Math.min(p.ZTop, p.ZMax);
+          return revolve([polyLoop([[0, -zt], [p.ZMax + zt, -zt], [p.ZMax - zt, zt], [0, zt]])]).scale(p.HLX, p.HLY, 1);
+        }
+      },
+      G4Paraboloid: {  // radius R1 at -HLZ, R2 at +HLZ
+        req: ['HLZ', 'R1', 'R2'],
+        tpl: ['d:HLZ = 20 mm', 'd:R1 = 20 mm', 'd:R2 = 35 mm'],
+        build: p => {
+          const dz = p.HLZ, k1 = (p.R2 * p.R2 - p.R1 * p.R1) / (2 * dz), k2 = (p.R2 * p.R2 + p.R1 * p.R1) / 2;
+          const curve = curvePts(z => Math.sqrt(Math.max(0, k1 * z + k2)), -dz, dz);
+          return revolve([[[[0, -dz], curve[0]], curve, [curve[curve.length - 1], [0, dz]]]]);
+        }
+      },
+      G4Hype: {  // r(z)^2 = R^2 + (tan(stereo) z)^2
+        req: ['OR', 'HLZ'],
+        tpl: ['d:IR = 20 mm', 'd:OR = 30 mm', 'd:IS = 0.7 rad', 'd:OS = 0.7 rad', 'd:HLZ = 50 mm'],
+        build: p => {
+          const dz = p.HLZ, ir = num(p, 'IR', 0), is = Math.tan(num(p, 'IS', 0)), os = Math.tan(num(p, 'OS', 0));
+          const outer = curvePts(z => Math.hypot(p.OR, os * z), -dz, dz);
+          const inner = curvePts(z => Math.hypot(ir, is * z), dz, -dz);
+          return revolve([[outer, [outer[outer.length - 1], inner[0]], inner, [inner[inner.length - 1], outer[0]]]]);
+        }
+      },
+      G4Tet: {
+        req: ['Anchor', 'P2', 'P3', 'P4'],
+        tpl: ['dv:Anchor = 3 0 0 17.3 mm', 'dv:P2 = 3 0 16.3 -5.8 mm', 'dv:P3 = 3 -14.1 -8.2 -5.8 mm', 'dv:P4 = 3 14.1 -8.2 -5.8 mm'],
+        build: p => {
+          const [a, b, c, d] = [p.Anchor, p.P2, p.P3, p.P4];
+          return trisGeometry([...a, ...b, ...c, ...a, ...b, ...d, ...a, ...c, ...d, ...b, ...c, ...d]);
+        }
+      },
+      G4ExtrudedSolid: {  // polygon (x y pairs) swept from -HLZ (Off1, Scale1) to +HLZ (Off2, Scale2)
+        req: ['Polygons', 'HLZ'],
+        tpl: ['dv:Polygons = 16 -30 -30 -30 30 30 30 30 -30 15 -30 15 15 -15 15 -15 -30 mm', 'd:HLZ = 20 mm',
+              'dv:Off1 = 2 10. 10. mm', 'u:Scale1 = 1.', 'dv:Off2 = 2 -10. -10. mm', 'u:Scale2 = 0.6'],
+        build: p => {
+          const poly = [];
+          for (let i = 0; i + 1 < p.Polygons.length; i += 2) poly.push([p.Polygons[i], p.Polygons[i + 1]]);
+          const sec = (off, sc, z) => poly.map(([x, y]) => [x * sc + off[0], y * sc + off[1], z]);
+          return linearLoft(sec(vec(p, 'Off1', [0, 0]), num(p, 'Scale1', 1), -p.HLZ),
+                            sec(vec(p, 'Off2', [0, 0]), num(p, 'Scale2', 1), p.HLZ));
+        }
+      },
+      G4TwistedBox: {
+        req: ['Twist', 'HLX', 'HLY', 'HLZ'],
+        tpl: ['d:Twist = 30 deg', 'd:HLX = 30 mm', 'd:HLY = 40 mm', 'd:HLZ = 60 mm'],
+        build: p => twistedLoft(trapCorners(p.HLZ, 0, 0, p.HLY, p.HLX, p.HLX, 0, p.HLY, p.HLX, p.HLX, 0), p.Twist)
+      },
+      G4RTwistedTrap: {  // HLX1 at -HLY, HLX2 at +HLY
+        req: ['Twist', 'HLX1', 'HLX2', 'HLY', 'HLZ'],
+        tpl: ['d:Twist = 30 deg', 'd:HLX1 = 30 mm', 'd:HLX2 = 40 mm', 'd:HLY = 40 mm', 'd:HLZ = 60 mm'],
+        build: p => twistedLoft(trapCorners(p.HLZ, 0, 0, p.HLY, p.HLX1, p.HLX2, 0, p.HLY, p.HLX1, p.HLX2, 0), p.Twist)
+      },
+      G4GTwistedTrap: {
+        req: ['Twist', 'HLZ', 'HLY1', 'HLX1', 'HLX2', 'HLY2', 'HLX3', 'HLX4'],
+        tpl: ['d:Twist = 30 deg', 'd:HLZ = 60 mm', 'd:Theta = 20 deg', 'd:Phi = 5 deg', 'd:HLY1 = 40 mm', 'd:HLX1 = 30 mm',
+              'd:HLX2 = 40 mm', 'd:HLY2 = 16 mm', 'd:HLX3 = 10 mm', 'd:HLX4 = 14 mm', 'd:Alpha = 10 deg'],
+        build: p => {
+          const a = num(p, 'Alpha', 0);
+          return twistedLoft(trapCorners(p.HLZ, num(p, 'Theta', 0), num(p, 'Phi', 0), p.HLY1, p.HLX1, p.HLX2, a,
+                                         p.HLY2, p.HLX3, p.HLX4, a), p.Twist);
+        }
+      },
+      G4TwistedTrd: {
+        req: ['HLX1', 'HLX2', 'HLY1', 'HLY2', 'HLZ', 'Twist'],
+        tpl: ['d:HLX1 = 30 mm', 'd:HLX2 = 10 mm', 'd:HLY1 = 40 mm', 'd:HLY2 = 15 mm', 'd:HLZ = 60 mm', 'd:Twist = 30 deg'],
+        build: p => twistedLoft(trapCorners(p.HLZ, 0, 0, p.HLY1, p.HLX1, p.HLX1, 0, p.HLY2, p.HLX2, p.HLX2, 0), p.Twist)
+      },
+      G4GenericTrap: {  // 8 (x, y) vertices: 4 at -HLZ then 4 at +HLZ; sides may be twisted
+        req: ['HLZ', 'Vertices'],
+        tpl: ['d:HLZ = 25 mm', 'dv:Vertices = 16 -30 -30 -30 30 30 30 30 -30 -5 -20 -20 20 20 20 20 -20 mm'],
+        build: p => {
+          const v = p.Vertices, bottom = [], top = [];
+          for (let i = 0; i < 4; i++) {
+            bottom.push([v[2 * i], v[2 * i + 1], -p.HLZ]);
+            top.push([v[8 + 2 * i], v[8 + 2 * i + 1], p.HLZ]);
+          }
+          return linearLoft(bottom, top, 12);  // straight lines between matching vertices
+        }
+      },
+      G4TwistedTubs: {  // tube segment of opening Phi; ends rotated by -/+Twist/2 and joined by straight lines
+        req: ['Twist', 'EndInnerRad', 'EndOuterRad', 'HLZ', 'Phi'],
+        tpl: ['d:Twist = 60 deg', 'd:EndInnerRad = 10 mm', 'd:EndOuterRad = 15 mm', 'd:HLZ = 20 mm', 'd:Phi = 90 deg'],
+        build: p => {
+          const n = Math.max(6, Math.ceil(32 * p.Phi / Math.PI));
+          const section = (off, z) => {
+            const pts = [];
+            for (let i = 0; i <= n; i++) {
+              const a = off - p.Phi / 2 + p.Phi * i / n;
+              pts.push([p.EndOuterRad * Math.cos(a), p.EndOuterRad * Math.sin(a), z]);
+            }
+            for (let i = n; i >= 0; i--) {
+              const a = off - p.Phi / 2 + p.Phi * i / n;
+              pts.push([p.EndInnerRad * Math.cos(a), p.EndInnerRad * Math.sin(a), z]);
+            }
+            return pts;
+          };
+          return linearLoft(section(-p.Twist / 2, -p.HLZ), section(p.Twist / 2, p.HLZ), 24);
+        }
+      },
+    };
+
+    const POSITIVE_PROPS = new Set(['HLX', 'HLY', 'HLZ', 'HL', 'RMax', 'R', 'RTor', 'LX', 'LY', 'LZ', 'NSides',
+      'HLX1', 'HLX2', 'HLX3', 'HLX4', 'HLY1', 'HLY2', 'EndOuterRad', 'Phi', 'ZMax']);
+
+    const VECTOR_LENGTHS = { LowNorm: 3, HighNorm: 3, Anchor: 3, P2: 3, P3: 3, P4: 3, Off1: 2, Off2: 2, Vertices: 16 };
+
+    function validateGeometry(geom, warnings, errors){
+      for (const [name, p] of Object.entries(geom)){
+        if (!p.Type){
+          errors.push(`${name}: Missing Type`);
+          continue;
+        }
+
+        const shape = SHAPES[p.Type];
+        if (name === 'World' && p.Type === 'TsBox' && ['HLX', 'HLY', 'HLZ'].some(k => p[k] === undefined)) {
+          // TOPAS supplies a default World; without its size there is nothing to draw
+        } else if (shape) {
+          for (const k of shape.req) {
+            if (p[k] === undefined) errors.push(`${name}: Missing ${k}`);
+            else if (POSITIVE_PROPS.has(k) && typeof p[k] === 'number' && !(p[k] > 0)) errors.push(`${name}: ${k} must be > 0`);
+          }
+          for (const [k, len] of Object.entries(VECTOR_LENGTHS)) {
+            if (p[k] !== undefined && (!Array.isArray(p[k]) || p[k].length !== len)) {
+              errors.push(`${name}: ${k} needs ${len} values`);
+            }
+          }
+          if (p.RMin !== undefined && p.RMax !== undefined && p.RMin >= p.RMax) errors.push(`${name}: RMin must be < RMax`);
+          if (p.Type === 'G4ExtrudedSolid' && Array.isArray(p.Polygons) && (p.Polygons.length < 6 || p.Polygons.length % 2)) {
+            errors.push(`${name}: Polygons needs x y pairs for at least 3 points`);
+          }
+        } else if (p.Type === 'TsCAD') {
+          if (!p.InputFile) errors.push(`${name}: Missing InputFile`);
+        } else if (p.Type !== 'Group') {
+          warnings.push(`${name}: Quick View doesn't draw '${p.Type}' (its children are still placed)`);
+        }
+
+        if (p.Parent && !geom[p.Parent]) {
+          errors.push(`${name}: Parent '${p.Parent}' not found`);
+        }
+      }
+    }
+
+    function getChildrenOf(name, geom) {
+      return Object.keys(geom).filter(key => geom[key].Parent === name);
+    }
+
+    function isInsideHollowCylinder(childGeom, cylinderGeom, childPos, cylPos) {
+      if (cylinderGeom.Type !== 'TsCylinder' || !cylinderGeom.RMin || cylinderGeom.RMin <= 0) {
+        return false;
+      }
+      const relX = childPos.x - cylPos.x;
+      const relY = childPos.y - cylPos.y;
+      const relZ = childPos.z - cylPos.z;
+      const radialDist = Math.sqrt(relX * relX + relY * relY);
+      const cylHL = cylinderGeom.HL || 0;
+      if (Math.abs(relZ) > cylHL) return false;
+      let childRadius = 0;
+      if (childGeom.Type === 'TsCylinder') childRadius = childGeom.RMax || 0;
+      else if (childGeom.Type === 'TsSphere') childRadius = childGeom.RMax || 0;
+      else if (childGeom.Type === 'TsBox') childRadius = Math.max(childGeom.HLX || 0, childGeom.HLY || 0);
+      return (radialDist + childRadius) <= cylinderGeom.RMin;
+    }
+
+    function checkHierarchyOverlaps(geom, meshes, warnings) {
+      const allNames = Object.keys(geom);
+      for (const parent of allNames) {
+        const children = getChildrenOf(parent, geom);
+        if (children.length > 300) continue;
+        for (let i = 0; i < children.length; i++) {
+          for (let j = i + 1; j < children.length; j++) {
+            const child1Name = children[i];
+            const child2Name = children[j];
+            const child1Geom = geom[child1Name];
+            const child2Geom = geom[child2Name];
+            if (meshes[child1Name] && meshes[child2Name]) {
+              const box1 = new THREE.Box3().setFromObject(meshes[child1Name]);
+              const box2 = new THREE.Box3().setFromObject(meshes[child2Name]);
+              if (box1.intersectsBox(box2)) {
+                const pos1 = { x: child1Geom.TransX || 0, y: child1Geom.TransY || 0, z: child1Geom.TransZ || 0 };
+                const pos2 = { x: child2Geom.TransX || 0, y: child2Geom.TransY || 0, z: child2Geom.TransZ || 0 };
+                const child2InChild1Cavity = isInsideHollowCylinder(child2Geom, child1Geom, pos2, pos1);
+                const child1InChild2Cavity = isInsideHollowCylinder(child1Geom, child2Geom, pos1, pos2);
+                if (!child2InChild1Cavity && !child1InChild2Cavity) {
+                  warnings.push(`Overlap: '${child1Name}' and '${child2Name}' (siblings under '${parent}')`);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // TOPAS builds the matrix with rotateX(RotX), rotateY(RotY), rotateZ(RotZ) and hands it to
+    // G4PVPlacement, which treats it as the rotation of the frame; the component itself turns by
+    // the inverse, Rx(-RotX)·Ry(-RotY)·Rz(-RotZ). "Active" applies the angles directly instead.
+    function topasQuaternion(p) {
+      if (p.RotMatrix) return placementQuaternion(p.RotMatrix);
+      const s = rotConvention === 'g4' ? -1 : 1;
+      return new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(s * num(p, 'RotX', 0), s * num(p, 'RotY', 0), s * num(p, 'RotZ', 0), 'XYZ'));
+    }
+
+    function localMatrix(p) {
+      return new THREE.Matrix4().compose(
+        new THREE.Vector3(num(p, 'TransX', 0), num(p, 'TransY', 0), num(p, 'TransZ', 0)),
+        topasQuaternion(p),
+        new THREE.Vector3(1, 1, 1));
+    }
+
+    function createMesh(name, p, errors){
+      const shape = SHAPES[p.Type];
+      let mesh;
+      let geom = null;
+      if (shape && shape.req.every(k => p[k] !== undefined)) {
+        try {
+          geom = shape.build(p);
+        } catch (e) {
+          errors.push(`${name}: couldn't build ${p.Type} (${e.message})`);
+        }
+      }
+
+      if (geom) {
+        let meshColor;
+        if (p.Color) {
+          meshColor = typeof p.Color === 'number' ? p.Color : colorNameToHex(p.Color);
+        } else {
+          const matData = materials[p.Material] || materials['Default'];
+          meshColor = matData.color;
+        }
+        const mat = new THREE.MeshPhongMaterial({
+          color: meshColor,
+          transparent: true,
+          opacity: currentOpacity,
+          wireframe: wireframeMode,
+          side: THREE.DoubleSide
+        });
+        if (p.Invisible === true) mat.visible = false;  // children stay visible, as in TOPAS
+        mesh = new THREE.Mesh(geom, mat);
+        mesh.userData.wire = /wire/i.test(p.DrawingStyle || '');
+      } else {
+        mesh = new THREE.Object3D();  // Group, TsCAD (STL placed separately), undrawn types
+      }
+
+      mesh.name = name;
+      mesh.position.set(num(p, 'TransX', 0), num(p, 'TransY', 0), num(p, 'TransZ', 0));
+      mesh.quaternion.copy(topasQuaternion(p));
+      return mesh;
+    }
+
+    function buildHierarchy(geom, errors) {
+      const meshes = {};
+      const roots = [];
+
+      Object.entries(geom).forEach(([name, p]) => {
+        meshes[name] = createMesh(name, p, errors);
+      });
+
+      Object.entries(geom).forEach(([name, p]) => {
+        let cycle = false;
+        for (let cur = p.Parent, n = 0; cur && geom[cur]; cur = geom[cur].Parent, n++) {
+          if (cur === name || n > 1000) { cycle = true; break; }
+        }
+        if (cycle) {
+          errors.push(`${name}: Parent chain loops back to itself`);
+          roots.push(meshes[name]);
+        } else if (p.Parent && meshes[p.Parent]) {
+          meshes[p.Parent].add(meshes[name]);
+        } else {
+          roots.push(meshes[name]);
+        }
+      });
+
+      return { meshes, roots };
+    }
+
+    // Component -> World transform in TOPAS coordinates
+    function getWorldMatrix(componentName, geom) {
+      const chain = [];
+      const seen = new Set();
+      let current = componentName;
+      while (current && geom[current] && !seen.has(current)) {
+        seen.add(current);
+        chain.push(current);
+        current = geom[current].Parent;
+      }
+      const matrix = new THREE.Matrix4();
+      for (let i = chain.length - 1; i >= 0; i--) matrix.multiply(localMatrix(geom[chain[i]]));
+      return matrix;
+    }
+
+    function mulberry32(seed) {
+      return () => {
+        seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+        let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    function hashString(s) {
+      let h = 2166136261;
+      for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+      return h;
+    }
+
+    // n roughly even directions on the unit sphere
+    function fibonacciDirections(n) {
+      const dirs = [], golden = Math.PI * (3 - Math.sqrt(5));
+      for (let i = 0; i < n; i++) {
+        const z = 1 - 2 * (i + 0.5) / n, r = Math.sqrt(1 - z * z), a = golden * i;
+        dirs.push(new THREE.Vector3(r * Math.cos(a), r * Math.sin(a), z));
+      }
+      return dirs;
+    }
+
+    // Source points and rays are drawn over the geometry so emission inside a solid stays visible
+    function onTop(obj) {
+      obj.material.depthTest = false;
+      obj.renderOrder = 10;
+      return obj;
+    }
+
+    // Line segments (pairs of points) as one object
+    function makeSegments(pairs, color, opacity) {
+      const pos = [];
+      pairs.forEach(([a, b]) => pos.push(a.x, a.y, a.z, b.x, b.y, b.z));
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      return onTop(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color, transparent: true, opacity })));
+    }
+
+    function makePoints(points, color, size) {
+      const g = new THREE.BufferGeometry().setFromPoints(points);
+      return onTop(new THREE.Points(g, new THREE.PointsMaterial({ color, size, sizeAttenuation: false })));
+    }
+
+    // Short rays in all directions around each point
+    function isotropicStars(points, length, color, opacity) {
+      const dirs = fibonacciDirections(14), pairs = [];
+      points.forEach(p => dirs.forEach(d => pairs.push([p, p.clone().addScaledVector(d, length)])));
+      return makeSegments(pairs, color, opacity);
+    }
+
+    const SAMPLE_MATERIAL = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+
+    const SAMPLE_RAY = new THREE.Vector3(0.5774, 0.5771, 0.5779).normalize();
+
+    const sampleRaycaster = new THREE.Raycaster();
+
+    // Uniform points inside closed solids: random points in each bounding box, kept when a ray
+    // from the point crosses the surface an odd number of times
+    function samplePointsInSolids(solids, count, rng) {
+      const prepared = solids.map(s => {
+        if (!s.geometry.boundingBox) s.geometry.computeBoundingBox();
+        const size = s.geometry.boundingBox.getSize(new THREE.Vector3());
+        return { ...s, box: s.geometry.boundingBox, volume: Math.max(size.x * size.y * size.z, 1e-9),
+                 mesh: new THREE.Mesh(s.geometry, SAMPLE_MATERIAL) };
+      });
+      const total = prepared.reduce((a, s) => a + s.volume, 0);
+      const points = [];
+      for (let attempt = 0; attempt < count * 30 && points.length < count; attempt++) {
+        let pick = rng() * total, s = prepared[0];
+        for (const cand of prepared) { s = cand; if ((pick -= cand.volume) <= 0) break; }
+        const p = new THREE.Vector3(
+          s.box.min.x + rng() * (s.box.max.x - s.box.min.x),
+          s.box.min.y + rng() * (s.box.max.y - s.box.min.y),
+          s.box.min.z + rng() * (s.box.max.z - s.box.min.z));
+        sampleRaycaster.set(p, SAMPLE_RAY);
+        if (sampleRaycaster.intersectObject(s.mesh, false).length % 2 === 1) points.push(p.applyMatrix4(s.matrix));
+      }
+      return points;
+    }
+
+    function makeTextSprite(text, color) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+      ctx.font = 'bold 24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+      const texture = new THREE.CanvasTexture(canvas);
+      const mat = new THREE.SpriteMaterial({ map: texture });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(80, 20, 1);
+      return sprite;
+    }
+
+    function makeAxisLabel(text, color) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+      ctx.font = 'bold 48px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 32, 32);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas) }));
+      sprite.scale.set(16, 16, 1);
+      return sprite;
+    }
+
+    // STL vertices stay exactly as in the file; TsCAD placement and Units are applied in syncSTLPositions
+    function loadSTL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          try {
+            const loader = new THREE.STLLoader();
+            const geom = loader.parse(e.target.result);
+            geom.computeVertexNormals();
+            resolve({ name: file.name, geometry: geom });
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = () => reject(new Error('Failed to read ' + file.name));
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    function getSTLColor(filename) {
+      const name = filename.toLowerCase();
+      if (name.includes('tumor') || name.includes('gtv') || name.includes('ctv')) return 0xff2244;
+      if (name.includes('bone') || name.includes('skull')) return 0xf0e0c0;
+      if (name.includes('air') || name.includes('sinus')) return 0x66ddff;
+      if (name.includes('skin') || name.includes('body')) return 0xffaa99;
+      if (name.includes('brain')) return 0xddaadd;
+      if (name.includes('tissue') || name.includes('soft')) return 0xff9988;
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash) + name.charCodeAt(i);
+      return Math.abs(hash) & 0xffffff;
+    }
+
+    function getSTLOpacity(filename) {
+      const name = filename.toLowerCase();
+      if (name.includes('tumor')) return 0.85;
+      if (name.includes('skin') || name.includes('body')) return 0.2;
+      if (name.includes('bone')) return 0.4;
+      return 0.5;
+    }
+
+    function updateSTLList() {
+      const list = document.getElementById('stlList');
+      list.innerHTML = '';
+      const names = Object.keys(stlMeshes);
+      if (names.length === 0) {
+        list.style.display = 'none';
+        return;
+      }
+      list.style.display = 'block';
+
+      for (const name of names) {
+        const mesh = stlMeshes[name];
+        const colorHex = '#' + mesh.material.color.getHexString();
+        const placed = mesh.userData.placedBy;
+        const div = document.createElement('div');
+        div.className = 'stl-item';
+        div.innerHTML = `
+          <input type="checkbox" ${mesh.visible ? 'checked' : ''} />
+          <span class="color-swatch" style="background:${colorHex}"></span>
+          <span style="flex:1"></span>
+          <span class="${placed ? 'stl-placed' : 'stl-unplaced'}"></span>
+        `;
+        div.children[2].textContent = name;
+        div.children[3].textContent = placed ? `→ ${placed}` : 'overlay, world mm';
+        div.querySelector('input').addEventListener('change', e => {
+          mesh.visible = e.target.checked;
+        });
+        list.appendChild(div);
+      }
+    }
+
+    function clearSTLs() {
+      while (stlGroup.children.length > 0) {
+        const m = stlGroup.children[0];
+        if (m.geometry) m.geometry.dispose();
+        if (m.material) m.material.dispose();
+        stlGroup.remove(m);
+      }
+      stlMeshes = {};
+      updateSTLList();
+    }
+
+    function populateScene(result){
+      for (let i=geometryGroup.children.length-1;i>=0;i--){
+        geometryGroup.remove(geometryGroup.children[i]);
+      }
+      while (scorerGroup.children.length > 0) scorerGroup.remove(scorerGroup.children[0]);
+
+      parsedGeometry = result.geometry;
+      parsedSources = result.sources || {};
+      parsedScorers = result.scorers || {};
+      const warnings = [...result.warnings];
+      const errors = [...result.errors];
+
+      const { meshes, roots } = buildHierarchy(parsedGeometry, errors);
+      roots.forEach(root => geometryGroup.add(root));
+
+      syncSTLPositions(parsedGeometry, warnings);
+      updateSTLList();
+      drawSources(parsedSources, parsedGeometry, meshes, warnings);
+      scene.updateMatrixWorld(true);
+
+      // Dynamic Dose Scorer Box Outlines
+      let activeScorersFound = false;
+      Object.values(parsedScorers).forEach(sc => {
+        const compName = sc.Component;
+        if (compName && meshes[compName]) {
+          const targetMesh = meshes[compName];
+          const targetBox = new THREE.BoxHelper(targetMesh, 0x00ffcc);
+          scorerGroup.add(targetBox);
+          activeScorersFound = true;
+        }
+      });
+      document.getElementById('scorerIndicator').style.display = activeScorersFound ? 'inline-block' : 'none';
+
+      checkHierarchyOverlaps(parsedGeometry, meshes, warnings);
+      applyWireframe();
+
+      return { warnings, errors };
+    }
+
+    function renderWarnings(warns, errs){
+      const el = document.getElementById('warnings');
+      el.innerHTML = '';
+
+      if (errs.length===0 && warns.length===0){
+        el.innerHTML = `<span class="pill ok">✓ Geometry looks good</span>`;
+        return;
+      }
+
+      errs.forEach(e=>{
+        const d=document.createElement('div');
+        d.className='logline';
+        d.style.borderColor='rgba(244,67,54,.35)';
+        d.textContent = `⚠ ${e}`;
+        el.appendChild(d);
+      });
+
+      warns.forEach(w=>{
+        const d=document.createElement('div');
+        d.className='logline';
+        d.style.borderColor='rgba(255,152,0,.35)';
+        d.textContent = `⚠ ${w}`;
+        el.appendChild(d);
+      });
+    }
+
+    // World-space bounds of the visible meshes
+    function visibleBounds(groups) {
+      scene.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      groups.forEach(g => g.traverseVisible(o => {
+        if (!o.isMesh || (o.material && o.material.visible === false)) return;
+        if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+        box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));
+      }));
+      return box;
+    }
+
+    function fitToView(){
+      const box = visibleBounds([geometryGroup, stlGroup, beamGroup]);
+      if (box.isEmpty()) return;
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const dist = maxDim * 1.75 + 1;
+
+      camera.position.set(center.x + dist, center.y + dist*0.8, center.z + dist);
+      controls.target.copy(center);
+      controls.update();
+    }
+
+    // Screen axes: up = TOPAS +Z, right = TOPAS +X, toward the viewer = TOPAS -Y
+    function setNamedView(name){
+      let box = visibleBounds([geometryGroup, stlGroup]);
+      if (box.isEmpty()) box = new THREE.Box3(new THREE.Vector3(-100, -100, -100), new THREE.Vector3(100, 100, 100));
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const d = Math.max(size.x, size.y, size.z) * 1.4 + 1;
+
+      if (name==='top') camera.position.set(center.x, center.y + d, center.z + d * 1e-3);
+      else if (name==='front') camera.position.set(center.x, center.y, center.z + d);
+      else if (name==='right') camera.position.set(center.x + d, center.y, center.z);
+      else camera.position.set(center.x + d, center.y + d*0.8, center.z + d);
+
+      controls.target.copy(center);
+      controls.update();
+    }
+
+    function applyWireframe(){
+      geometryGroup.traverse(o=>{
+        if (o.isMesh){
+          o.material.wireframe = wireframeMode || !!o.userData.wire;
+          o.material.opacity = currentOpacity;
+          o.material.needsUpdate = true;
+        }
+      });
+      stlGroup.traverse(o => {
+        if (o.isMesh) {
+          o.material.wireframe = wireframeMode;
+          o.material.needsUpdate = true;
+        }
+      });
+    }
+
+    function debounce(fn, ms){
+      let t;
+      return (...args)=>{
+        clearTimeout(t);
+        t=setTimeout(()=>fn.apply(null,args), ms);
+      };
+    }
+
+    function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+    // ---------------------------------------------------------------------------------
+    // Shared state for the Geant4-family viewers
+    // ---------------------------------------------------------------------------------
+    let parsedGeometry = {};
+    let parsedSources = [];
+    let parsedScorers = {};
+    let userColors = {};
+    let currentOpacity = 0.7;
+    let lastMeshes = {};
+    let geomEditor, macroEditor, activeTab = 'geom';
+    const MAX_INSTANCES = 5000;
+
+    Object.assign(materials, {
+      'G4_Galactic': { color: 0x222222, opacity: 0.05 },
+      'G4_PLEXIGLASS': { color: 0xdddddd, opacity: 0.5 },
+      'G4_PMMA': { color: 0xdddddd, opacity: 0.5 },
+      'G4_Pb': { color: 0x2f2f2f, opacity: 0.9 },
+      'G4_Cu': { color: 0xb87333, opacity: 0.8 },
+      'G4_Al': { color: 0xc0c0c0, opacity: 0.8 },
+      'G4_W': { color: 0x555566, opacity: 0.9 },
+      'G4_Fe': { color: 0x708090, opacity: 0.8 },
+      'G4_STAINLESS-STEEL': { color: 0x708090, opacity: 0.8 },
+      'G4_LUNG_ICRP': { color: 0xffccdd, opacity: 0.3 },
+      'G4_SODIUM_IODIDE': { color: 0xeeeeaa, opacity: 0.6 },
+      'G4_CESIUM_IODIDE': { color: 0xeeeeaa, opacity: 0.6 },
+      'G4_BGO': { color: 0xeeeeaa, opacity: 0.6 },
+      'G4_Si': { color: 0x445566, opacity: 0.7 },
+      'G4_Ge': { color: 0x667788, opacity: 0.7 }
+    });
+
+    // ---------------------------------------------------------------------------------
+    // Expressions with CLHEP units (Geant4 internal units: mm, rad, MeV, ns)
+    // ---------------------------------------------------------------------------------
+    const CLHEP_UNITS = {
+      mm: 1, millimeter: 1, cm: 10, centimeter: 10, m: 1000, meter: 1000, km: 1e6, kilometer: 1e6,
+      um: 1e-3, micrometer: 1e-3, nm: 1e-6, nanometer: 1e-6, angstrom: 1e-7, fermi: 1e-12,
+      rad: 1, radian: 1, mrad: 1e-3, milliradian: 1e-3, deg: Math.PI / 180, degree: Math.PI / 180, sr: 1, steradian: 1,
+      eV: 1e-6, keV: 1e-3, MeV: 1, GeV: 1e3, TeV: 1e6, PeV: 1e9,
+      ns: 1, nanosecond: 1, ps: 1e-3, picosecond: 1e-3, us: 1e3, microsecond: 1e3, ms: 1e6, millisecond: 1e6, s: 1e9, second: 1e9,
+      Bq: 1e-9, becquerel: 1e-9, kBq: 1e-6, MBq: 1e-3, GBq: 1, Ci: 37, curie: 37, mCi: 0.037, uCi: 3.7e-5,
+      perCent: 0.01, percent: 0.01, perThousand: 1e-3, perMillion: 1e-6
+    };
+    // "<x>" placeholders are left by the menus for the user to fill in
+    const isPlaceholder = w => /^<.*>$/.test(w);
+    const MATH_CONSTANTS ={ pi: Math.PI, twopi: 2 * Math.PI, halfpi: Math.PI / 2, pi2: Math.PI * Math.PI };
+    const MATH_FUNCTIONS = { sin: Math.sin, cos: Math.cos, tan: Math.tan, asin: Math.asin, acos: Math.acos,
+      atan: Math.atan, atan2: Math.atan2, sqrt: Math.sqrt, exp: Math.exp, log: Math.log, log10: Math.log10,
+      pow: Math.pow, abs: Math.abs, fabs: Math.abs, min: Math.min, max: Math.max };
+
+    // Evaluates "10.*cm + $offset/2" style expressions. lookup(name) gives user parameters.
+    // Returns { value, hasUnit } so callers can apply a default unit to bare numbers.
+    function evaluateExpression(expr, lookup = () => undefined) {
+      const src = String(expr).trim();
+      const tokens = [];
+      const re = /\s*(\d+\.?\d*(?:[eE][-+]?\d+)?|\.\d+(?:[eE][-+]?\d+)?|\$?[A-Za-z_][\w.]*|\*\*|[-+*\/^(),])/y;
+      let m;
+      re.lastIndex = 0;
+      while (re.lastIndex < src.length && (m = re.exec(src))) tokens.push(m[1]);
+      if (re.lastIndex < src.length && src.slice(re.lastIndex).trim()) throw new Error(`Cannot read '${src}'`);
+      let i = 0, hasUnit = false;
+      const peek = () => tokens[i], next = () => tokens[i++];
+      const expect = t => { if (next() !== t) throw new Error(`Expected '${t}' in '${src}'`); };
+      function expression() {
+        let v = term();
+        while (peek() === '+' || peek() === '-') v = next() === '+' ? v + term() : v - term();
+        return v;
+      }
+      function term() {
+        let v = unary();
+        while (peek() === '*' || peek() === '/') v = next() === '*' ? v * unary() : v / unary();
+        return v;
+      }
+      function unary() {
+        if (peek() === '-') { next(); return -unary(); }
+        if (peek() === '+') { next(); return unary(); }
+        return power();
+      }
+      function power() {
+        const base = primary();
+        if (peek() === '^' || peek() === '**') { next(); return Math.pow(base, unary()); }
+        return base;
+      }
+      function primary() {
+        const t = next();
+        if (t === undefined) throw new Error(`Incomplete expression '${src}'`);
+        if (t === '(') { const v = expression(); expect(')'); return v; }
+        if (/^[\d.]/.test(t)) return parseFloat(t);
+        const name = t.replace(/^\$/, '');
+        if (peek() === '(' && MATH_FUNCTIONS[name]) {
+          next();
+          const args = [];
+          if (peek() !== ')') { args.push(expression()); while (peek() === ',') { next(); args.push(expression()); } }
+          expect(')');
+          return MATH_FUNCTIONS[name](...args);
+        }
+        const user = lookup(name);
+        if (user !== undefined) {
+          if (typeof user === 'object') { hasUnit = hasUnit || user.hasUnit; return user.value; }
+          return user;
+        }
+        if (CLHEP_UNITS[name] !== undefined) { hasUnit = true; return CLHEP_UNITS[name]; }
+        if (MATH_CONSTANTS[name] !== undefined) return MATH_CONSTANTS[name];
+        if (/^<.*>$/.test(t)) throw new Error(`fill in ${t}`);
+        throw new Error(`Unknown name '${t}' in '${src}'`);
+      }
+      const value = expression();
+      if (i < tokens.length) throw new Error(`Cannot read '${src}'`);
+      if (!isFinite(value)) throw new Error(`'${src}' is not a finite number`);
+      return { value, hasUnit };
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Extra solid types shared by the text-geometry and GDML readers
+    // ---------------------------------------------------------------------------------
+    // Rotation part of a placement: Geant4 G4PVPlacement(rot, ...) treats rot as the frame
+    // rotation, so the solid turns by its inverse (same switch as the TOPAS viewer).
+    function placementQuaternion(frameMatrix) {
+      const q = new THREE.Quaternion().setFromRotationMatrix(frameMatrix);
+      return rotConvention === 'g4' ? q.invert() : q;
+    }
+
+    function partMatrix(part) {
+      const q = part.rot ? (part.active ? new THREE.Quaternion().setFromRotationMatrix(part.rot) : placementQuaternion(part.rot))
+                         : new THREE.Quaternion();
+      return new THREE.Matrix4().compose(part.pos || new THREE.Vector3(), q, part.scale || new THREE.Vector3(1, 1, 1));
+    }
+
+    Object.assign(SHAPES, {
+      // Boolean solids: union and intersection draw both operands; subtraction draws the first
+      // operand only (no CSG cutting in the browser)
+      Boolean: {
+        req: ['Op', 'A', 'B'],
+        tpl: [],
+        build: p => {
+          const a = SHAPES[p.A.Type].build(p.A).clone().applyMatrix4(partMatrix(p.APlace || {}));
+          if (p.Op === 'subtraction') return a;
+          const b = SHAPES[p.B.Type].build(p.B).clone().applyMatrix4(partMatrix(p.BPlace || {}));
+          return mergeGeometries([a, b]);
+        }
+      },
+      Scaled: {
+        req: ['A', 'ScaleVec'],
+        tpl: [],
+        build: p => SHAPES[p.A.Type].build(p.A).clone().scale(p.ScaleVec[0], p.ScaleVec[1], p.ScaleVec[2])
+      },
+      // Polygon (x, y pairs) swept through z sections of { z, off: [x, y], scale }
+      Extruded: {
+        req: ['Polygon', 'Sections'],
+        tpl: [],
+        build: p => loft(p.Sections.map(s => p.Polygon.map(([x, y]) => [x * s.scale + s.off[0], y * s.scale + s.off[1], s.z])))
+      },
+      Tessellated: {
+        req: ['Triangles'],
+        tpl: [],
+        build: p => trisGeometry(p.Triangles)
+      }
+    });
+
+    // Logical volumes + placements -> one entry per placed copy, in the shape the viewer draws.
+    // logicals: { name: { p: solid params or null (assembly), material, color, invisible, line } }
+    // placements: [{ child, parent, copy, pvName, pos: Vector3, rot: Matrix4 (frame) | null, line }]
+    function expandInstances(logicals, placements, worldName, warnings, errors) {
+      const byParent = {};
+      placements.forEach(pl => (byParent[pl.parent] = byParent[pl.parent] || []).push(pl));
+      const geometry = {}, counts = {};
+      let total = 0, truncated = false;
+      const keyFor = name => {
+        counts[name] = (counts[name] || 0) + 1;
+        let key = counts[name] === 1 ? name : `${name}#${counts[name]}`;
+        while (geometry[key]) key += "'";
+        return key;
+      };
+      const place = (logName, parentKey, pl, depth) => {
+        if (total >= MAX_INSTANCES) { truncated = true; return; }
+        if (depth > 60) { errors.push(`'${logName}' is placed inside itself`); return; }
+        const lv = logicals[logName];
+        if (!lv) { errors.push(`Line ${pl ? pl.line : '?'}: volume '${logName}' isn't defined`); return; }
+        const key = keyFor(logName);
+        total++;
+        const inst = lv.p ? { ...lv.p } : { Type: 'Group' };
+        Object.assign(inst, { Material: lv.material, Logical: logName, PhysName: pl ? pl.pvName : logName, Line: pl ? pl.line : lv.line });
+        if (lv.color !== undefined) inst.Color = lv.color;
+        if (lv.invisible) inst.Invisible = true;
+        if (parentKey) {
+          inst.Parent = parentKey;
+          inst.TransX = pl.pos.x; inst.TransY = pl.pos.y; inst.TransZ = pl.pos.z;
+          if (pl.rot) inst.RotMatrix = pl.rot;
+        }
+        geometry[key] = inst;
+        (byParent[logName] || []).forEach(child => place(child.child, key, child, depth + 1));
+      };
+      if (worldName) place(worldName, null, null, 0);
+      if (truncated) warnings.push(`Only the first ${MAX_INSTANCES} placed volumes are drawn`);
+      for (const pl of placements) {
+        if (!logicals[pl.parent]) errors.push(`Line ${pl.line}: parent volume '${pl.parent}' isn't defined`);
+      }
+      return geometry;
+    }
+
+    // Frame rotation from angles, the way Geant4 readers build it: rotateX, then rotateY, then rotateZ
+    function frameRotationXYZ(rx, ry, rz) {
+      return new THREE.Matrix4().makeRotationZ(rz)
+        .multiply(new THREE.Matrix4().makeRotationY(ry))
+        .multiply(new THREE.Matrix4().makeRotationX(rx));
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Sources ("emitters"): where particles start and which way they go.
+    // pos.kind: point | plane | solid | volumes | line ; dir.kind: iso | const | cone | range | focus
+    // ---------------------------------------------------------------------------------
+    const EMITTER_COLORS = [0xff3366, 0xffcc00, 0x66ff99, 0x33ccff, 0xcc88ff, 0xff9933, 0x99ffee, 0xff66cc];
+
+    function worldHalfSize() {
+      const box = new THREE.Box3();
+      geometryGroup.updateMatrixWorld(true);
+      geometryGroup.traverse(o => {
+        if (!o.isMesh) return;
+        if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+        box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));
+      });
+      if (box.isEmpty()) return 500;
+      const s = box.getSize(new THREE.Vector3());
+      return Math.max(s.x, s.y, s.z) / 2 || 500;
+    }
+
+    // Accepts logical, physical or touchable names ("world#1:/MyVolA#2" -> MyVolA)
+    function cleanVolumeName(n) {
+      return String(n).split(':').pop().replace(/^\//, '').replace(/#\d+$/, '');
+    }
+
+    function solidsForNames(names, geom, meshes) {
+      const wanted = new Set(names.map(cleanVolumeName));
+      const out = [];
+      for (const [key, p] of Object.entries(geom)) {
+        if (!(wanted.has(p.Logical) || wanted.has(p.PhysName) || wanted.has(key))) continue;
+        if (meshes[key] && meshes[key].isMesh) out.push({ geometry: meshes[key].geometry, matrix: getWorldMatrix(key, geom) });
+      }
+      return out;
+    }
+
+    const insideRaycaster = new THREE.Raycaster();
+    function insideSolid(solid, worldPoint) {
+      if (!solid.inverse) {
+        solid.inverse = solid.matrix.clone().invert();
+        solid.mesh = new THREE.Mesh(solid.geometry, SAMPLE_MATERIAL);
+      }
+      insideRaycaster.set(worldPoint.clone().applyMatrix4(solid.inverse), SAMPLE_RAY);
+      return insideRaycaster.intersectObject(solid.mesh, false).length % 2 === 1;
+    }
+
+    // Uniform points on the surfaces of solids (area-weighted triangles)
+    function samplePointsOnSurfaces(solids, count, rng) {
+      const tris = [];
+      let total = 0;
+      for (const s of solids) {
+        const g = s.geometry.index ? s.geometry.toNonIndexed() : s.geometry;
+        const pos = g.getAttribute('position');
+        for (let i = 0; i + 2 < pos.count; i += 3) {
+          const a = new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(s.matrix);
+          const b = new THREE.Vector3().fromBufferAttribute(pos, i + 1).applyMatrix4(s.matrix);
+          const c = new THREE.Vector3().fromBufferAttribute(pos, i + 2).applyMatrix4(s.matrix);
+          const area = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a)).length() / 2;
+          if (area > 0) { tris.push({ a, b, c, area }); total += area; }
+        }
+      }
+      const points = [];
+      if (!tris.length) return points;
+      for (let k = 0; k < count; k++) {
+        let pick = rng() * total, t = tris[0];
+        for (const cand of tris) { t = cand; if ((pick -= cand.area) <= 0) break; }
+        let u = rng(), v = rng();
+        if (u + v > 1) { u = 1 - u; v = 1 - v; }
+        points.push(t.a.clone().addScaledVector(new THREE.Vector3().subVectors(t.b, t.a), u)
+                              .addScaledVector(new THREE.Vector3().subVectors(t.c, t.a), v));
+      }
+      return points;
+    }
+
+    function planeOutline(pos) {
+      const pts = [];
+      if (pos.shape === 'square' || pos.shape === 'rectangle') {
+        const a = pos.a, b = pos.shape === 'square' ? pos.a : pos.b;
+        pts.push([-a, -b], [a, -b], [a, b], [-a, b]);
+      } else {
+        const a = pos.a, b = pos.shape === 'ellipse' ? pos.b : pos.a;
+        for (let i = 0; i < 64; i++) pts.push([a * Math.cos(TWO_PI * i / 64), b * Math.sin(TWO_PI * i / 64)]);
+      }
+      return pts;
+    }
+
+    function insidePlaneShape(pos, x, y) {
+      if (pos.shape === 'square') return Math.abs(x) <= pos.a && Math.abs(y) <= pos.a;
+      if (pos.shape === 'rectangle') return Math.abs(x) <= pos.a && Math.abs(y) <= pos.b;
+      if (pos.shape === 'ellipse') return (x / pos.a) ** 2 + (y / pos.b) ** 2 <= 1;
+      const r = Math.hypot(x, y);
+      return r <= pos.a && (pos.shape !== 'annulus' || r >= (pos.a0 || 0));
+    }
+
+    function drawPlaneRegion(pos, color) {
+      const outline = planeOutline(pos);
+      const shape = new THREE.Shape(outline.map(([x, y]) => new THREE.Vector2(x, y)));
+      if (pos.shape === 'annulus' && pos.a0 > 0) {
+        const hole = [];
+        for (let i = 0; i < 64; i++) hole.push(new THREE.Vector2(pos.a0 * Math.cos(-TWO_PI * i / 64), pos.a0 * Math.sin(-TWO_PI * i / 64)));
+        shape.holes.push(new THREE.Path(hole));
+      }
+      const fill = new THREE.Mesh(new THREE.ShapeGeometry(shape, 48),
+        new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.35 }));
+      fill.applyMatrix4(pos.matrix);
+      beamGroup.add(fill);
+      const loop = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(outline.map(([x, y]) => new THREE.Vector3(x, y, 0))),
+                                      new THREE.LineBasicMaterial({ color }));
+      loop.applyMatrix4(pos.matrix);
+      beamGroup.add(loop);
+    }
+
+    function samplePlane(pos, count, rng) {
+      const pts = [];
+      const a = pos.a, b = pos.shape === 'rectangle' || pos.shape === 'ellipse' ? pos.b : pos.a;
+      for (let k = 0; k < count * 10 && pts.length < count; k++) {
+        const x = (rng() * 2 - 1) * a, y = (rng() * 2 - 1) * b;
+        if (insidePlaneShape(pos, x, y)) pts.push(new THREE.Vector3(x, y, 0).applyMatrix4(pos.matrix));
+      }
+      return pts;
+    }
+
+    // Beam-like extrusion of a plane source's outline along a direction
+    function drawPlaneBeam(pos, dir, length, color) {
+      const outline = planeOutline(pos).map(([x, y]) => new THREE.Vector3(x, y, 0).applyMatrix4(pos.matrix));
+      const pairs = [];
+      const step = Math.max(1, Math.floor(outline.length / 24));
+      for (let i = 0; i < outline.length; i += step) pairs.push([outline[i], outline[i].clone().addScaledVector(dir, length)]);
+      const far = outline.map(p => p.clone().addScaledVector(dir, length));
+      far.forEach((p, i) => pairs.push([p, far[(i + 1) % far.length]]));
+      beamGroup.add(makeSegments(pairs, color, 0.35));
+    }
+
+    function coneDirections(axis, half, n) {
+      const a = axis.clone().normalize();
+      const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), a);
+      const dirs = [];
+      for (let i = 0; i < n; i++) {
+        const phi = TWO_PI * i / n;
+        dirs.push(new THREE.Vector3(Math.sin(half) * Math.cos(phi), Math.sin(half) * Math.sin(phi), Math.cos(half)).applyQuaternion(q));
+      }
+      return dirs;
+    }
+
+    function raysFrom(points, dirs, length, color, opacity) {
+      const pairs = [];
+      points.forEach(p => dirs.forEach(d => pairs.push([p, p.clone().addScaledVector(d, length)])));
+      beamGroup.add(makeSegments(pairs, color, opacity));
+    }
+
+    function drawEmitter(em, geom, meshes, scale, color, warnings) {
+      const rng = mulberry32(hashString(em.name));
+      const L = 0.15 * scale;
+      const pos = em.pos;
+      let samples = [], center = new THREE.Vector3();
+
+      if (pos.kind === 'point') {
+        center = pos.center.clone();
+        samples = [center];
+      } else if (pos.kind === 'plane') {
+        drawPlaneRegion(pos, color);
+        center = new THREE.Vector3().setFromMatrixPosition(pos.matrix);
+        samples = samplePlane(pos, 150, rng);
+      } else if (pos.kind === 'solid') {
+        const g = SHAPES[pos.p.Type].build(pos.p);
+        const wire = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color, wireframe: true, transparent: true, opacity: 0.2 }));
+        wire.applyMatrix4(pos.matrix);
+        beamGroup.add(wire);
+        center = new THREE.Vector3().setFromMatrixPosition(pos.matrix);
+        const solid = [{ geometry: g, matrix: pos.matrix }];
+        samples = pos.surface ? samplePointsOnSurfaces(solid, 250, rng) : samplePointsInSolids(solid, 250, rng);
+      } else if (pos.kind === 'volumes') {
+        const solids = solidsForNames(pos.names, geom, meshes);
+        if (!solids.length) {
+          warnings.push(`Source ${em.name}: no drawn volume named ${pos.names.join(', ')}`);
+        } else {
+          samples = pos.surface ? samplePointsOnSurfaces(solids, 300, rng) : samplePointsInSolids(solids, 300, rng);
+          if (samples.length) center = new THREE.Box3().setFromPoints(samples).getCenter(new THREE.Vector3());
+        }
+      } else if (pos.kind === 'line') {
+        const end = pos.start.clone().addScaledVector(pos.dir.clone().normalize(), pos.length || 2 * L);
+        beamGroup.add(makeSegments([[pos.start, end]], color, 0.9));
+        center = pos.start.clone();
+        for (let i = 0; i <= 10; i++) samples.push(pos.start.clone().lerp(end, i / 10));
+      }
+
+      if (em.confine && em.confine.length) {
+        const cs = solidsForNames(em.confine, geom, meshes);
+        if (!cs.length) warnings.push(`Source ${em.name}: confine volume ${em.confine.join(', ')} isn't drawn`);
+        else {
+          samples = samples.filter(p => cs.some(s => insideSolid(s, p)));
+          if (!samples.length) warnings.push(`Source ${em.name}: its region doesn't overlap ${em.confine.join(', ')}`);
+        }
+      }
+      if (pos.kind === 'point' || !samples.length) {
+        beamGroup.add(makePoints([center], color, 9));
+        if (!samples.length) samples = [center];
+      } else {
+        beamGroup.add(makePoints(samples, color, 4));
+      }
+
+      const single = pos.kind === 'point';
+      const starts = single ? [center] : samples.slice(0, 12);
+      const d = em.dir;
+      if (d.kind === 'iso') {
+        if (single) raysFrom(starts, fibonacciDirections(60), L, color, 0.6);
+        else beamGroup.add(isotropicStars(starts, 0.35 * L, color, 0.5));
+      } else if (d.kind === 'const') {
+        const dir = d.dir.clone().normalize();
+        if (pos.kind === 'plane') {
+          drawPlaneBeam(pos, dir, 4 * L, color);
+          beamGroup.add(new THREE.ArrowHelper(dir, center, 2 * L, color, 0.15 * L, 0.08 * L));
+        } else if (single) {
+          beamGroup.add(new THREE.ArrowHelper(dir, center, 2 * L, color, 0.15 * L, 0.08 * L));
+        } else {
+          starts.forEach(p => beamGroup.add(new THREE.ArrowHelper(dir, p, 0.6 * L, color, 0.12 * L, 0.06 * L)));
+        }
+      } else if (d.kind === 'cone') {
+        const half = Math.min(Math.max(d.half, 0.01), Math.PI);
+        const coneStarts = single || pos.kind === 'plane' ? [center] : samples.slice(0, 6);
+        raysFrom(coneStarts, coneDirections(d.dir, half, 24), L, color, 0.6);
+        coneStarts.forEach(p => beamGroup.add(new THREE.ArrowHelper(d.dir.clone().normalize(), p, 1.2 * L, color, 0.12 * L, 0.06 * L)));
+        if (pos.kind === 'plane') drawPlaneBeam(pos, d.dir.clone().normalize(), 2 * L, color);
+      } else if (d.kind === 'range') {
+        // Geant4 GPS angular sampling: momentum = -(sinθ cosφ, sinθ sinφ, cosθ) in the angular frame
+        const dirs = fibonacciDirections(400).filter(v => {
+          const th = Math.acos(Math.max(-1, Math.min(1, -v.z)));
+          let ph = Math.atan2(-v.y, -v.x);
+          if (ph < 0) ph += TWO_PI;
+          return th >= d.thetaMin - 1e-9 && th <= d.thetaMax + 1e-9 && ph >= d.phiMin - 1e-9 && ph <= d.phiMax + 1e-9;
+        }).map(v => v.applyMatrix4(d.frame));
+        const shown = single ? dirs.filter((_, i) => i % Math.max(1, Math.ceil(dirs.length / 80)) === 0)
+                             : dirs.filter((_, i) => i % Math.max(1, Math.ceil(dirs.length / 14)) === 0);
+        raysFrom(starts, shown, single ? L : 0.35 * L, color, single ? 0.6 : 0.5);
+      } else if (d.kind === 'focus') {
+        const pairs = samples.slice(0, 40).map(p => [p, d.point]);
+        beamGroup.add(makeSegments(pairs, color, 0.45));
+        beamGroup.add(makePoints([d.point], color, 7));
+      }
+
+      const label = makeTextSprite(em.label || em.name, color);
+      label.position.copy(center).add(new THREE.Vector3(0, 0, 0.3 * L + 15));
+      beamGroup.add(label);
+    }
+
+    function drawSources(emitters, geom, meshes = lastMeshes, warnings = null) {
+      lastMeshes = meshes;
+      while (beamGroup.children.length > 0) {
+        const child = beamGroup.children[0];
+        child.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+        beamGroup.remove(child);
+      }
+      const warn = warnings || [];
+      const scale = worldHalfSize();
+      (emitters || []).forEach((em, i) => {
+        try {
+          drawEmitter(em, geom, meshes, scale, EMITTER_COLORS[i % EMITTER_COLORS.length], warn);
+        } catch (e) {
+          warn.push(`Source ${em.name}: ${e.message}`);
+        }
+      });
+    }
+
+    // ---------------------------------------------------------------------------------
+    // STL files are shown as overlays in world coordinates (mm)
+    // ---------------------------------------------------------------------------------
+    function syncSTLPositions() {
+      for (const mesh of Object.values(stlMeshes)) mesh.userData.placedBy = null;
+    }
+
+    async function handleSTLFiles(files) {
+      try {
+        const results = await Promise.all(Array.from(files).map(loadSTL));
+        for (const { name, geometry } of results) {
+          if (stlMeshes[name]) {
+            stlGroup.remove(stlMeshes[name]);
+            stlMeshes[name].geometry.dispose();
+            stlMeshes[name].material.dispose();
+          }
+          const mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({
+            color: getSTLColor(name), transparent: true, opacity: getSTLOpacity(name),
+            side: THREE.DoubleSide, wireframe: wireframeMode
+          }));
+          mesh.name = name;
+          stlGroup.add(mesh);
+          stlMeshes[name] = mesh;
+        }
+        updateSTLList();
+        fitToView();
+      } catch (err) {
+        console.error('STL load error:', err);
+        alert('Error loading STL: ' + err.message);
+      }
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Editors: geometry and macro tabs
+    // ---------------------------------------------------------------------------------
+    // Light syntax colouring for text geometry (:TAGS, // comments) and macros (/commands, # comments)
+    CodeMirror.defineMode('g4text', () => ({
+      token(stream) {
+        if (stream.sol() && stream.match(/^\s*:[A-Za-z_]+/)) return 'keyword';
+        if (stream.match('//')) { stream.skipToEnd(); return 'comment'; }
+        if (stream.match(/^"[^"]*"/)) return 'string';
+        if (stream.match(/^\$[A-Za-z_]\w*/)) return 'variable-2';
+        if (stream.match(/^[A-Za-z_][\w.\-]*/)) return null;   // names like R00 or G4_AIR
+        if (stream.match(/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?/)) return 'number';
+        if (stream.match(/^<[^>\s]*>/)) return 'error';
+        stream.next();
+        return null;
+      }
+    }));
+    CodeMirror.defineMode('g4macro', () => ({
+      token(stream) {
+        if (stream.match(/^\s*#/)) { stream.skipToEnd(); return 'comment'; }
+        if (stream.sol() && stream.match(/^\s*\/\S+/)) return 'keyword';
+        if (stream.match(/^"[^"]*"/)) return 'string';
+        if (stream.match(/^[A-Za-z_][\w.\-]*/)) return null;   // names like source1 or e-
+        if (stream.match(/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?/)) return 'number';
+        if (stream.match(/^<[^>\s]*>/)) return 'error';
+        stream.next();
+        return null;
+      }
+    }));
+
+    function makeEditor(elementId, value, mode) {
+      const el = document.getElementById(elementId);
+      const cm = CodeMirror(el, { value, mode, theme: 'material-darker', lineNumbers: true, tabSize: 2, indentUnit: 2 });
+      el.querySelector('.CodeMirror').style.height = '100%';
+      cm.on('change', debounce(updateGeometry, 600));
+      return cm;
+    }
+
+    function currentEditor() { return activeTab === 'geom' ? geomEditor : macroEditor; }
+
+    function showTab(tab) {
+      activeTab = tab;
+      document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+      document.getElementById('editorGeom').style.display = tab === 'geom' ? 'block' : 'none';
+      document.getElementById('editorMacro').style.display = tab === 'macro' ? 'block' : 'none';
+      currentEditor().refresh();
+      hideParamMenu();
+    }
+
+    // Appends lines at the end of an editor (switching to its tab) and returns the first new line
+    function appendLines(cm, lines) {
+      showTab(cm === geomEditor ? 'geom' : 'macro');
+      const last = cm.lastLine();
+      const lead = cm.getLine(last).trim() ? '\n\n' : (last > 0 && cm.getLine(last - 1).trim() ? '\n' : '');
+      cm.replaceRange(lead + lines.join('\n') + '\n', { line: last, ch: cm.getLine(last).length });
+      const first = last + lead.split('\n').length - 1;
+      cm.scrollIntoView({ line: cm.lastLine(), ch: 0 });
+      updateGeometry();
+      return first;
+    }
+
+    function insertLineAfter(cm, line, text) {
+      cm.replaceRange('\n' + text, { line, ch: cm.getLine(line).length });
+      return line + 1;
+    }
+
+    // Selects the first <placeholder> on a line, or puts the cursor at ch
+    function focusPlaceholder(cm, line, ch = null) {
+      const text = cm.getLine(line);
+      const m = text.match(/<[^>\s]*>/);
+      if (m) cm.setSelection({ line, ch: m.index }, { line, ch: m.index + m[0].length });
+      else cm.setCursor({ line, ch: ch === null ? text.length : ch });
+      cm.focus();
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Click menu: each format supplies FORMAT.menuFor(which, cm, line) -> { title, groups }
+    // ---------------------------------------------------------------------------------
+    let paramMenuItems = [];
+
+    function hideParamMenu() {
+      document.getElementById('paramMenu').style.display = 'none';
+    }
+
+    function showParamMenu() {
+      const cm = currentEditor();
+      if (cm.somethingSelected()) return hideParamMenu();
+      const cur = cm.getCursor();
+      const menu = FORMAT.menuFor(activeTab, cm, cur.line);
+      if (!menu || !menu.groups.some(g => g.items.length)) return hideParamMenu();
+      const list = document.getElementById('paramMenuList');
+      list.innerHTML = '';
+      paramMenuItems = [];
+      let rows = 0;
+      for (const group of menu.groups) {
+        if (!group.items.length) continue;
+        const og = document.createElement('optgroup');
+        og.label = group.label;
+        for (const it of group.items) {
+          const opt = document.createElement('option');
+          opt.value = String(paramMenuItems.length);
+          opt.textContent = it.label;
+          og.appendChild(opt);
+          paramMenuItems.push(it);
+        }
+        list.appendChild(og);
+        rows += group.items.length + 1;
+      }
+      list.size = Math.min(rows, 14);
+      list.selectedIndex = -1;
+      document.getElementById('paramMenuTitle').textContent = menu.title;
+      const box = document.getElementById('paramMenu');
+      box.style.display = 'block';
+      const coords = cm.cursorCoords(cur, 'window');
+      const w = box.offsetWidth, h = box.offsetHeight;
+      box.style.left = Math.max(8, Math.min(coords.left, window.innerWidth - w - 8)) + 'px';
+      box.style.top = Math.max(8, coords.bottom + 4 + h > window.innerHeight ? coords.top - h - 4 : coords.bottom + 4) + 'px';
+    }
+
+    function initParamMenu() {
+      [geomEditor, macroEditor].forEach(cm => {
+        cm.getWrapperElement().addEventListener('click', showParamMenu);
+        cm.on('keydown', hideParamMenu);
+        cm.on('scroll', hideParamMenu);
+      });
+      document.addEventListener('mousedown', e => {
+        if (!document.getElementById('paramMenu').contains(e.target)) hideParamMenu();
+      });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') hideParamMenu(); });
+      document.getElementById('paramMenuList').addEventListener('change', e => {
+        const item = paramMenuItems[parseInt(e.target.value, 10)];
+        hideParamMenu();
+        if (item) item.apply();
+      });
+    }
+
+    function updateGeometry() {
+      let result;
+      try {
+        result = FORMAT.parse(geomEditor.getValue(), macroEditor.getValue());
+      } catch (e) {
+        result = { geometry: {}, sources: [], warnings: [], errors: [`Couldn't read the files: ${e.message}`] };
+      }
+      result.scorers = {};
+      validateGeometry(result.geometry, result.warnings, result.errors);
+      const sceneResult = populateScene(result);
+      renderWarnings(sceneResult.warnings, sceneResult.errors);
+    }
+
+    window.addEventListener('load', () => {
+      initThree();
+      geomEditor = makeEditor('editorGeom', FORMAT.defaultGeom, FORMAT.geomMode);
+      macroEditor = makeEditor('editorMacro', FORMAT.defaultMacro, 'g4macro');
+      initParamMenu();
+      updateGeometry();
+      fitToView();
+
+      document.querySelectorAll('.tab').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+      document.getElementById('btnUpdate').onclick = updateGeometry;
+      document.getElementById('btnDownload').onclick = () => {
+        const text = currentEditor().getValue();
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = activeTab === 'geom' ? FORMAT.geomFileName : FORMAT.macroFileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      };
+      document.getElementById('btnOpen').onclick = () => document.getElementById('openFileInput').click();
+      document.getElementById('openFileInput').onchange = e => {
+        const file = e.target.files[0];
+        e.target.value = '';
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const isMacro = /\.(in|mac|g4mac)$/i.test(file.name);
+          const cm = isMacro ? macroEditor : (FORMAT.isGeometryFile(file.name) ? geomEditor : currentEditor());
+          showTab(cm === geomEditor ? 'geom' : 'macro');
+          cm.setValue(String(reader.result));
+          updateGeometry();
+          fitToView();
+        };
+        reader.readAsText(file);
+      };
+      document.getElementById('btnFit').onclick = fitToView;
+      document.getElementById('btnReset').onclick = () => {
+        camera.position.set(300, 240, 300);
+        controls.target.set(0, 0, 0);
+        controls.update();
+      };
+      document.getElementById('btnWire').onclick = () => { wireframeMode = !wireframeMode; applyWireframe(); };
+      document.getElementById('btnAxes').onclick = () => { showAxes = !showAxes; axesHelper.visible = showAxes; };
+      document.getElementById('opacity').oninput = e => { currentOpacity = parseFloat(e.target.value); applyWireframe(); };
+      document.getElementById('rotConv').onchange = e => { rotConvention = e.target.value; updateGeometry(); };
+
+      const addSelect = document.getElementById('shapeInsert');
+      const addItems = [];
+      FORMAT.addGroups().forEach(group => {
+        const og = document.createElement('optgroup');
+        og.label = group.label;
+        group.items.forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = String(addItems.length);
+          opt.textContent = item.label;
+          og.appendChild(opt);
+          addItems.push(item);
+        });
+        addSelect.appendChild(og);
+      });
+      addSelect.onchange = e => {
+        const item = addItems[parseInt(e.target.value, 10)];
+        e.target.value = '';
+        if (item) item.apply();
+      };
+
+      document.getElementById('btnLoadSTL').onclick = () => document.getElementById('stlFileInput').click();
+      document.getElementById('stlFileInput').onchange = e => {
+        if (e.target.files.length > 0) handleSTLFiles(e.target.files);
+        e.target.value = '';
+      };
+      document.getElementById('btnClearSTL').onclick = clearSTLs;
+      document.querySelectorAll('.controls [data-view]').forEach(btn =>
+        btn.addEventListener('click', () => setNamedView(btn.getAttribute('data-view'))));
+    });
+
+    // ---------------------------------------------------------------------------------
+    // GAMOS: geometry in the Geant4 text format (G4tgr/G4tgb readers), sources from
+    // /gamos/generator commands. Bare numbers are mm for lengths and deg for angles in the
+    // geometry; macro numbers are Geant4 internal units (mm, rad, MeV) unless a unit is given.
+    // ---------------------------------------------------------------------------------
+    // Parameter positions read in degrees (G4tgrSolid::FillSolidParams)
+    const TG_ANGLE_PARAMS = {
+      TUBS: [3, 4], CONS: [5, 6], PARA: [3, 4, 5], TRAP: [1, 2, 6, 10], SPHERE: [2, 3, 4, 5], TORUS: [3, 4],
+      POLYCONE: [0, 1], POLYHEDRA: [0, 1], HYPE: [2, 3], TWISTEDBOX: [0], TWISTEDTRAP: [0, 2, 3, 10],
+      TWISTEDTRD: [5], TWISTEDTUBS: [0, 4]
+    };
+    // Parameter order (G4tgbVolume::FindOrConstructG4Solid)
+    const TG_PARAM_NAMES = {
+      BOX: ['dx', 'dy', 'dz'],
+      TUBE: ['rmin', 'rmax', 'dz'],
+      TUBS: ['rmin', 'rmax', 'dz', 'sphi', 'dphi'],
+      CONE: ['rmin1', 'rmax1', 'rmin2', 'rmax2', 'dz'],
+      CONS: ['rmin1', 'rmax1', 'rmin2', 'rmax2', 'dz', 'sphi', 'dphi'],
+      PARA: ['dx', 'dy', 'dz', 'alpha', 'theta', 'phi'],
+      TRD: ['dx1', 'dx2', 'dy1', 'dy2', 'dz'],
+      TRAP: ['dz', 'theta', 'phi', 'dy1', 'dx1', 'dx2', 'alp1', 'dy2', 'dx3', 'dx4', 'alp2'],
+      SPHERE: ['rmin', 'rmax', 'sphi', 'dphi', 'stheta', 'dtheta'],
+      ORB: ['r'],
+      TORUS: ['rmin', 'rmax', 'rtor', 'sphi', 'dphi'],
+      POLYCONE: ['sphi', 'dphi', 'nz', 'z rmin rmax ... (or r z ...)'],
+      POLYHEDRA: ['sphi', 'dphi', 'nsides', 'nz', 'z rmin rmax ... (or r z ...)'],
+      ELLIPTICALTUBE: ['dx', 'dy', 'dz'],
+      ELLIPSOID: ['ax', 'by', 'cz', 'zbottom', 'ztop'],
+      ELLIPTICALCONE: ['xsemi', 'ysemi', 'zheight', 'zcut'],
+      HYPE: ['rin', 'rout', 'stereo_in', 'stereo_out', 'dz'],
+      TET: ['anchor_x', 'anchor_y', 'anchor_z', 'p2_x', 'p2_y', 'p2_z', 'p3_x', 'p3_y', 'p3_z', 'p4_x', 'p4_y', 'p4_z'],
+      TWISTEDBOX: ['twist', 'dx', 'dy', 'dz'],
+      TWISTEDTRD: ['dx1', 'dx2', 'dy1', 'dy2', 'dz', 'twist'],
+      TWISTEDTRAP: ['twist', 'dz', 'theta', 'phi', 'dy1', 'dx1', 'dx2', 'dy2', 'dx3', 'dx4', 'alpha'],
+      TWISTEDTUBS: ['twist', 'rin_end', 'rout_end', 'dz', 'dphi'],
+      EXTRUDED: ['nvert', 'x y ...', 'nsect', 'z xoff yoff scale ...'],
+      TESSELLATED: ['nfacets', 'npts x y z ... type ...'],
+      UNION: ['solid1', 'solid2', 'rotm', 'x', 'y', 'z'],
+      SUBTRACTION: ['solid1', 'solid2', 'rotm', 'x', 'y', 'z'],
+      INTERSECTION: ['solid1', 'solid2', 'rotm', 'x', 'y', 'z']
+    };
+    const TG_FIXED_COUNTS = {
+      BOX: 3, TUBE: 3, TUBS: 5, CONE: 5, CONS: 7, PARA: 6, TRD: 5, SPHERE: 6, ORB: 1, TORUS: 5,
+      ELLIPTICALTUBE: 3, ELLIPSOID: 5, ELLIPTICALCONE: 4, HYPE: 5, TET: 12, TWISTEDBOX: 4, TWISTEDTRD: 6,
+      TWISTEDTRAP: 11, TWISTEDTUBS: 5, UNION: 6, SUBTRACTION: 6, INTERSECTION: 6
+    };
+    const TG_NOT_IN_FORMAT = ['CUTTUBS', 'PARABOLOID', 'GENERICTRAP', 'GENERICPOLYHEDRA'];
+    const TG_TEMPLATES = {
+      BOX: '30. 40. 60.', TUBE: '0. 15. 20.', TUBS: '10. 15. 20. 0. 270.', CONE: '5. 10. 20. 25. 40.',
+      CONS: '5. 10. 20. 25. 40. 0. 270.', PARA: '30. 40. 60. 17. 0. 0.', TRD: '30. 10. 40. 15. 60.',
+      TRAP: '60. 20. 5. 40. 30. 40. 10. 16. 10. 14. 10.', SPHERE: '30. 50. 0. 360. 0. 180.', ORB: '50.',
+      TORUS: '5. 12. 40. 0. 270.', POLYCONE: '0. 360. 4 0. 0. 10. 10. 0. 10. 20. 0. 5. 30. 0. 5.',
+      POLYHEDRA: '0. 360. 6 2 0. 0. 15. 20. 0. 10.', ELLIPTICALTUBE: '5. 10. 20.', ELLIPSOID: '10. 20. 50. -10. 40.',
+      ELLIPTICALCONE: '0.4 0.8 50. 25.', HYPE: '20. 30. 40. 40. 50.',
+      TET: '0. 0. 17.3 0. 16.3 -5.8 -14.1 -8.2 -5.8 14.1 -8.2 -5.8', TWISTEDBOX: '30. 30. 40. 60.',
+      TWISTEDTRD: '30. 10. 40. 15. 60. 30.', TWISTEDTRAP: '30. 60. 20. 5. 40. 30. 40. 16. 10. 14. 10.',
+      TWISTEDTUBS: '60. 10. 15. 20. 90.', EXTRUDED: '4 -30. -30. -30. 30. 30. 30. 30. -30. 2 -20. 0. 0. 1. 20. 0. 0. 0.6',
+      TESSELLATED: '4 3 0. 0. 0. 20. 0. 0. 0. 20. 0. 0 3 0. 0. 0. 20. 0. 0. 0. 0. 20. 0 3 0. 0. 0. 0. 20. 0. 0. 0. 20. 0 3 20. 0. 0. 0. 20. 0. 0. 0. 20. 0'
+    };
+    const TG_COLOURS = ['0.6 0.8 1.0', '1.0 0.55 0.0', '0.5 1.0 0.0', '1.0 0.0 1.0', '1.0 1.0 0.0', '0.93 0.51 0.93', '0.53 0.81 0.92', '1.0 0.75 0.8'];
+    const IGNORED_TAGS = new Set([':ELEM', ':ISOT', ':ELEM_FROM_ISOT', ':MATE', ':MIXT', ':MIXT_BY_WEIGHT', ':MIXT_BY_VOLUME',
+      ':MIXT_BY_NATOMS', ':MATE_MEE', ':MATE_STATE', ':MATE_TEMPERATURE', ':MATE_PRESSURE', ':CHECK_OVERLAPS', ':PS']);
+
+    let gamosNames = { logicals: [], solids: [], rotms: [], world: 'world', placed: [] };
+
+    function tgWords(line) {
+      const words = [];
+      const re = /"([^"]*)"|(\S+)/g;
+      let m;
+      while ((m = re.exec(line))) words.push(m[1] !== undefined ? m[1] : m[2]);
+      return words;
+    }
+
+    function readTextRecords(text) {
+      const records = [];
+      let cur = null;
+      text.split(/\r?\n/).forEach((raw, i) => {
+        const cut = raw.indexOf('//');
+        const line = (cut >= 0 ? raw.slice(0, cut) : raw).trim();
+        if (!line) return;
+        const words = tgWords(line);
+        if (line.startsWith(':')) {
+          cur = { tag: words[0].toUpperCase(), words: words.slice(1), line: i + 1 };
+          records.push(cur);
+        } else if (/^#include/i.test(line)) {
+          records.push({ tag: '#INCLUDE', words: words.slice(1), line: i + 1 });
+          cur = null;
+        } else if (cur) {
+          cur.words.push(...words);   // continuation of the previous tag
+        } else {
+          records.push({ tag: '?', words, line: i + 1 });
+        }
+      });
+      return records;
+    }
+
+    // Text-format solid (type + numbers in Geant4 internal units) -> viewer solid parameters
+    function mapTextSolid(type, v) {
+      const need = n => {
+        if (v.length !== n) throw new Error(`${type} needs ${n} parameters (${TG_PARAM_NAMES[type].join(' ')}), found ${v.length}`);
+      };
+      switch (type) {
+        case 'BOX': need(3); return { Type: 'TsBox', HLX: v[0], HLY: v[1], HLZ: v[2] };
+        case 'TUBE': need(3); return { Type: 'TsCylinder', RMin: v[0], RMax: v[1], HL: v[2] };
+        case 'TUBS': need(5); return { Type: 'TsCylinder', RMin: v[0], RMax: v[1], HL: v[2], SPhi: v[3], DPhi: v[4] };
+        case 'CONE': need(5); return { Type: 'G4Cons', RMin1: v[0], RMax1: v[1], RMin2: v[2], RMax2: v[3], HL: v[4] };
+        case 'CONS': need(7); return { Type: 'G4Cons', RMin1: v[0], RMax1: v[1], RMin2: v[2], RMax2: v[3], HL: v[4], SPhi: v[5], DPhi: v[6] };
+        case 'PARA': need(6); return { Type: 'G4Para', HLX: v[0], HLY: v[1], HLZ: v[2], Alpha: v[3], Theta: v[4], Phi: v[5] };
+        case 'TRD': need(5); return { Type: 'G4Trd', HLX1: v[0], HLX2: v[1], HLY1: v[2], HLY2: v[3], HLZ: v[4] };
+        case 'TRAP':
+          if (v.length === 11) return { Type: 'G4GTrap', HLZ: v[0], Theta: v[1], Phi: v[2], HLY1: v[3], HLX1: v[4], HLX2: v[5],
+                                        Alp1: v[6], HLY2: v[7], HLX3: v[8], HLX4: v[9], Alp2: v[10] };
+          if (v.length === 4) return { Type: 'G4RTrap', LZ: v[0], LY: v[1], LX: v[2], LTX: v[3] };
+          throw new Error(`TRAP needs 11 parameters (${TG_PARAM_NAMES.TRAP.join(' ')}) or 4 (pz py px pltx), found ${v.length}`);
+        case 'SPHERE': need(6); return { Type: 'TsSphere', RMin: v[0], RMax: v[1], SPhi: v[2], DPhi: v[3], STheta: v[4], DTheta: v[5] };
+        case 'ORB': need(1); return { Type: 'G4Orb', R: v[0] };
+        case 'TORUS': need(5); return { Type: 'G4Torus', RMin: v[0], RMax: v[1], RTor: v[2], SPhi: v[3], DPhi: v[4] };
+        case 'POLYCONE': {
+          const n = Math.round(v[2]), z = [], a = [], b = [];
+          if (v.length === 3 + 3 * n) {
+            for (let i = 0; i < n; i++) { z.push(v[3 + 3 * i]); a.push(v[4 + 3 * i]); b.push(v[5 + 3 * i]); }
+            return { Type: 'G4HPolycone', PhiStart: v[0], PhiTotal: v[1], Z: z, RInner: a, ROuter: b };
+          }
+          if (v.length === 3 + 2 * n) {
+            for (let i = 0; i < n; i++) { a.push(v[3 + 2 * i]); z.push(v[4 + 2 * i]); }
+            return { Type: 'G4SPolycone', PhiStart: v[0], PhiTotal: v[1], R: a, Z: z };
+          }
+          throw new Error(`POLYCONE with ${n} planes needs ${3 + 3 * n} (z rmin rmax) or ${3 + 2 * n} (r z) parameters, found ${v.length}`);
+        }
+        case 'POLYHEDRA': {
+          const sides = Math.round(v[2]), n = Math.round(v[3]), z = [], a = [], b = [];
+          if (v.length === 4 + 3 * n) {
+            for (let i = 0; i < n; i++) { z.push(v[4 + 3 * i]); a.push(v[5 + 3 * i]); b.push(v[6 + 3 * i]); }
+            return { Type: 'G4HPolyhedra', PhiStart: v[0], PhiTotal: v[1], NSides: sides, Z: z, RInner: a, ROuter: b };
+          }
+          if (v.length === 4 + 2 * n) {
+            for (let i = 0; i < n; i++) { a.push(v[4 + 2 * i]); z.push(v[5 + 2 * i]); }
+            return { Type: 'G4SPolyhedra', PhiStart: v[0], PhiTotal: v[1], NSides: sides, R: a, Z: z };
+          }
+          throw new Error(`POLYHEDRA with ${n} planes needs ${4 + 3 * n} or ${4 + 2 * n} parameters, found ${v.length}`);
+        }
+        case 'ELLIPTICALTUBE': need(3); return { Type: 'G4EllipticalTube', HLX: v[0], HLY: v[1], HLZ: v[2] };
+        case 'ELLIPSOID':
+          if (v.length === 3) return { Type: 'G4Ellipsoid', HLX: v[0], HLY: v[1], HLZ: v[2] };
+          need(5); return { Type: 'G4Ellipsoid', HLX: v[0], HLY: v[1], HLZ: v[2], ZBottom: v[3], ZTop: v[4] };
+        case 'ELLIPTICALCONE': need(4); return { Type: 'G4EllipticalCone', HLX: v[0], HLY: v[1], ZMax: v[2], ZTop: v[3] };
+        case 'HYPE': need(5); return { Type: 'G4Hype', IR: v[0], OR: v[1], IS: v[2], OS: v[3], HLZ: v[4] };
+        case 'TET': need(12); return { Type: 'G4Tet', Anchor: v.slice(0, 3), P2: v.slice(3, 6), P3: v.slice(6, 9), P4: v.slice(9, 12) };
+        case 'TWISTEDBOX': need(4); return { Type: 'G4TwistedBox', Twist: v[0], HLX: v[1], HLY: v[2], HLZ: v[3] };
+        case 'TWISTEDTRD': need(6); return { Type: 'G4TwistedTrd', HLX1: v[0], HLX2: v[1], HLY1: v[2], HLY2: v[3], HLZ: v[4], Twist: v[5] };
+        case 'TWISTEDTRAP': need(11); return { Type: 'G4GTwistedTrap', Twist: v[0], HLZ: v[1], Theta: v[2], Phi: v[3], HLY1: v[4],
+                                                HLX1: v[5], HLX2: v[6], HLY2: v[7], HLX3: v[8], HLX4: v[9], Alpha: v[10] };
+        case 'TWISTEDTUBS': need(5); return { Type: 'G4TwistedTubs', Twist: v[0], EndInnerRad: v[1], EndOuterRad: v[2], HLZ: v[3], Phi: v[4] };
+        case 'EXTRUDED': {
+          const nv = Math.round(v[0]), poly = [];
+          for (let i = 0; i < nv; i++) poly.push([v[1 + 2 * i], v[2 + 2 * i]]);
+          const ns = Math.round(v[1 + 2 * nv]), sections = [];
+          for (let i = 0; i < ns; i++) {
+            const k = 2 + 2 * nv + 4 * i;
+            sections.push({ z: v[k], off: [v[k + 1], v[k + 2]], scale: v[k + 3] });
+          }
+          if (nv < 3 || ns < 2 || v.length !== 2 + 2 * nv + 4 * ns || sections.some(s => s.scale === undefined)) {
+            throw new Error('EXTRUDED needs: nvert, x y for each vertex, nsect, then z xoff yoff scale for each section');
+          }
+          return { Type: 'Extruded', Polygon: poly, Sections: sections };
+        }
+        case 'TESSELLATED': {
+          const nf = Math.round(v[0]), tris = [];
+          let k = 1;
+          for (let f = 0; f < nf; f++) {
+            const n = Math.round(v[k]);
+            if (n !== 3 && n !== 4) throw new Error(`TESSELLATED facet ${f + 1} has ${n} points (3 or 4 allowed)`);
+            const pts = [];
+            for (let j = 0; j < n; j++) pts.push(v.slice(k + 1 + 3 * j, k + 4 + 3 * j));
+            if (Math.round(v[k + 1 + 3 * n]) === 1) for (let j = 1; j < n; j++) pts[j] = pts[j].map((c, ci) => c + pts[0][ci]);
+            tris.push(...pts[0], ...pts[1], ...pts[2]);
+            if (n === 4) tris.push(...pts[0], ...pts[2], ...pts[3]);
+            k += 3 * n + 2;
+          }
+          if (tris.some(x => x === undefined || isNaN(x))) throw new Error('TESSELLATED parameters run short');
+          return { Type: 'Tessellated', Triangles: tris };
+        }
+        default:
+          if (TG_NOT_IN_FORMAT.includes(type)) throw new Error(`${type} isn't available in the Geant4 text format`);
+          throw new Error(`Unknown solid type '${type}'`);
+      }
+    }
+
+    function normalizeTgType(t) { return String(t).toUpperCase().replace(/_/g, ''); }
+    const TG_TYPES = new Set([...Object.keys(TG_PARAM_NAMES), ...TG_NOT_IN_FORMAT, 'MULTIUNION', 'SCALED']);
+
+    function parseGamosGeometry(text, warnings, errors) {
+      const records = readTextRecords(text);
+      const params = {};
+      const lookup = n => params[n];
+      const value = (w, kind) => {
+        if (isPlaceholder(w)) throw new Error(`fill in ${w}`);
+        const r = evaluateExpression(w, lookup);
+        if (r.hasUnit || kind === 'none') return r.value;
+        return kind === 'angle' ? r.value * Math.PI / 180 : r.value;
+      };
+      const rotms = {}, solidDefs = {}, solids = {}, logicals = {}, placements = [], colours = {}, vis = {};
+      const order = [];
+
+      // pass 1: parameters, rotations, solid definitions
+      for (const r of records) {
+        try {
+          if (r.tag === ':P') params[r.words[0]] = evaluateExpression(r.words[1], lookup);
+          else if (r.tag === ':ROTM') {
+            const [name, ...w] = r.words;
+            const a = w.map(x => value(x, 'angle'));
+            if (w.length === 3) rotms[name] = frameRotationXYZ(a[0], a[1], a[2]);
+            else if (w.length === 6) {
+              const col = (th, ph) => new THREE.Vector3(Math.sin(th) * Math.cos(ph), Math.sin(th) * Math.sin(ph), Math.cos(th));
+              rotms[name] = new THREE.Matrix4().makeBasis(col(a[0], a[1]), col(a[2], a[3]), col(a[4], a[5]));
+            } else if (w.length === 9) {
+              const n = w.map(x => value(x, 'none'));
+              rotms[name] = new THREE.Matrix4().makeBasis(new THREE.Vector3(n[0], n[1], n[2]), new THREE.Vector3(n[3], n[4], n[5]),
+                                                          new THREE.Vector3(n[6], n[7], n[8]));
+            } else throw new Error(`:ROTM ${name} needs 3 angles, 6 axis angles or 9 matrix values`);
+          } else if (r.tag === ':SOLID') {
+            solidDefs[r.words[0]] = { type: normalizeTgType(r.words[1]), words: r.words.slice(2), line: r.line };
+          }
+        } catch (e) {
+          errors.push(`Line ${r.line}: ${e.message}`);
+        }
+      }
+
+      const building = new Set();
+      const buildSolid = (type, words, line, label) => {
+        type = normalizeTgType(type);
+        if (['UNION', 'SUBTRACTION', 'INTERSECTION'].includes(type)) {
+          if (words.length !== 6) throw new Error(`${type} needs: solid1 solid2 rotm x y z`);
+          const [a, b, rotName, x, y, z] = words;
+          if (!rotms[rotName]) throw new Error(`rotation '${rotName}' isn't defined (:ROTM)`);
+          return { Type: 'Boolean', Op: type.toLowerCase(), A: solidByName(a), B: solidByName(b),
+                   BPlace: { pos: new THREE.Vector3(value(x, 'length'), value(y, 'length'), value(z, 'length')), rot: rotms[rotName] } };
+        }
+        if (type === 'MULTIUNION' || type === 'SCALED') throw new Error(`${type} solids aren't drawn by Quick View yet`);
+        const angles = new Set(type === 'TRAP' && words.length === 4 ? [] : (TG_ANGLE_PARAMS[type] || []));
+        return mapTextSolid(type, words.map((w, i) => value(w, angles.has(i) ? 'angle' : 'length')));
+      };
+      const solidByName = name => {
+        if (solids[name]) return solids[name];
+        const def = solidDefs[name];
+        if (!def) throw new Error(`solid '${name}' isn't defined (:SOLID)`);
+        if (building.has(name)) throw new Error(`solid '${name}' refers to itself`);
+        building.add(name);
+        try { solids[name] = buildSolid(def.type, def.words, def.line, name); } finally { building.delete(name); }
+        return solids[name];
+      };
+      for (const [name, def] of Object.entries(solidDefs)) {
+        try { solidByName(name); } catch (e) { errors.push(`Line ${def.line}: solid ${name}: ${e.message}`); }
+      }
+
+      // pass 2: volumes, placements, looks
+      for (const r of records) {
+        const w = r.words;
+        try {
+          if (r.tag === ':VOLU') {
+            const name = w[0];
+            let p = null, material;
+            const inlineType = w.length >= 3 && TG_TYPES.has(normalizeTgType(w[1])) && !solidDefs[w[1]];
+            if (inlineType) {
+              material = w[w.length - 1];
+              p = buildSolid(w[1], w.slice(2, -1), r.line, name);
+            } else {
+              if (w.length < 3) throw new Error(':VOLU needs: name solid material (or name TYPE parameters material)');
+              material = w[2];
+              p = solids[w[1]];
+              if (!p) {
+                if (!solidDefs[w[1]]) throw new Error(`solid '${w[1]}' isn't defined`);
+                continue;   // its own error is already listed
+              }
+            }
+            logicals[name] = { p, material, line: r.line };
+            order.push(name);
+          } else if (r.tag === ':PLACE') {
+            const [vol, copy, parent, rotName, x, y, z] = w;
+            if (w.length < 7) throw new Error(':PLACE needs: volume copyNo parent rotm x y z');
+            [vol, parent, rotName].forEach(t => { if (isPlaceholder(t)) throw new Error(`fill in ${t}`); });
+            if (!rotms[rotName]) throw new Error(`rotation '${rotName}' isn't defined (:ROTM)`);
+            placements.push({ child: vol, parent, copy, pvName: vol, line: r.line, rot: rotms[rotName],
+                              pos: new THREE.Vector3(value(x, 'length'), value(y, 'length'), value(z, 'length')) });
+          } else if (r.tag === ':COLOUR' || r.tag === ':COLOR') {
+            const [vol, ...c] = w;
+            const rgb = c.slice(0, 3).map(x => Math.max(0, Math.min(1, value(x, 'none'))));
+            if (rgb.length < 3) throw new Error(':COLOUR needs: volume r g b (0 to 1)');
+            colours[vol] = (Math.round(rgb[0] * 255) << 16) | (Math.round(rgb[1] * 255) << 8) | Math.round(rgb[2] * 255);
+          } else if (r.tag === ':VIS') {
+            vis[w[0]] = !/^off$/i.test(w[1] || 'ON');
+          } else if (/^:(PLACE_PARAM|DIVISION|REPL|PLACE_ASSEMBLY)/.test(r.tag)) {
+            warnings.push(`Line ${r.line}: ${r.tag} volumes aren't drawn by Quick View yet`);
+          } else if (r.tag === '#INCLUDE') {
+            warnings.push(`Line ${r.line}: #include files aren't read; paste their contents here`);
+          } else if (r.tag === '?') {
+            warnings.push(`Line ${r.line}: text outside a :TAG line was ignored`);
+          } else if (![':P', ':ROTM', ':SOLID'].includes(r.tag) && !IGNORED_TAGS.has(r.tag)) {
+            warnings.push(`Line ${r.line}: ${r.tag} isn't used by Quick View`);
+          }
+        } catch (e) {
+          errors.push(`Line ${r.line}: ${e.message}`);
+        }
+      }
+      Object.entries(colours).forEach(([v, c]) => { if (logicals[v]) logicals[v].color = c; });
+      Object.entries(vis).forEach(([v, on]) => { if (logicals[v]) logicals[v].invisible = !on; });
+
+      const placed = new Set(placements.map(p => p.child));
+      const roots = order.filter(n => !placed.has(n));
+      const world = roots.find(n => /^world$/i.test(n)) || roots[0] || order[0];
+      if (roots.length > 1) warnings.push(`Not placed anywhere (not drawn): ${roots.filter(n => n !== world).join(', ')}`);
+      gamosNames = { logicals: order, solids: Object.keys(solidDefs), rotms: Object.keys(rotms), world: world || 'world',
+                     placed: [...placed], params: Object.keys(params) };
+      return expandInstances(logicals, placements, world, warnings, errors);
+    }
+
+    // --- /gamos/generator sources ---------------------------------------------------
+    const GAMOS_POS_ARGS = {
+      GmGenerDistPositionPoint: ['POS_X', 'POS_Y', 'POS_Z'],
+      GmGenerDistPositionInG4Volumes: ['LV_NAME'],
+      GmGenerDistPositionInG4VolumesGeneral: ['TOUCHABLE_NAME'],
+      GmGenerDistPositionInUserVolumes: ['POS_X', 'POS_Y', 'POS_Z', 'ANG_X', 'ANG_Y', 'ANG_Z', 'SOLID_TYPE', 'SOLID_DIMENSIONS'],
+      GmGenerDistPositionInG4Surfaces: ['LV_NAME'],
+      GmGenerDistPositionInUserSurfaces: ['POS_X', 'POS_Y', 'POS_Z', 'ANG_X', 'ANG_Y', 'ANG_Z', 'SOLID_TYPE', 'SOLID_DIMENSIONS'],
+      GmGenerDistPositionLineSteps: ['POS_X', 'POS_Y', 'POS_Z', 'DIR_X', 'DIR_Y', 'DIR_Z', 'STEP'],
+      GmGenerDistPositionSquare: ['HALF_WIDTH', 'POS_X', 'POS_Y', 'POS_Z', 'DIR_X', 'DIR_Y', 'DIR_Z'],
+      GmGenerDistPositionRectangle: ['HALF_WIDTH_X', 'HALF_WIDTH_Y', 'POS_X', 'POS_Y', 'POS_Z', 'DIR_X', 'DIR_Y', 'DIR_Z'],
+      GmGenerDistPositionDisc: ['RADIUS', 'POS_X', 'POS_Y', 'POS_Z', 'DIR_X', 'DIR_Y', 'DIR_Z'],
+      GmGenerDistPositionDiscGaussian: ['SIGMA', 'POS_X', 'POS_Y', 'POS_Z', 'DIR_X', 'DIR_Y', 'DIR_Z']
+    };
+    const GAMOS_DIR_ARGS = {
+      GmGenerDistDirectionRandom: [],
+      GmGenerDistDirectionConst: ['DIR_X', 'DIR_Y', 'DIR_Z'],
+      GmGenerDistDirectionCone: ['DIR_X', 'DIR_Y', 'DIR_Z', 'OPENING_ANGLE'],
+      GmGenerDistDirectionConeGaussian: ['DIR_X', 'DIR_Y', 'DIR_Z', 'ANGLE_GAUSSIAN_SIGMA'],
+      GmGenerDistDirectionCone2DGaussian: ['DIR_X', 'DIR_Y', 'DIR_Z', 'ANGLE_GAUSSIAN_SIGMA_X', 'ANGLE_GAUSSIAN_SIGMA_Y'],
+      GmGenerDistDirectionGaussian: ['DIR_X', 'DIR_Y', 'DIR_Z', 'SIGMA_Y', 'SIGMA_Z']
+    };
+    const GAMOS_USER_SOLIDS = new Set(['ORB', 'SPHERE', 'ELLIPSOID', 'TUBS', 'BOX', 'CONS']);
+
+    function gamosNumber(w) {
+      if (isPlaceholder(w)) throw new Error(`fill in ${w}`);
+      return evaluateExpression(w).value;   // Geant4 internal units: mm, rad, MeV
+    }
+
+    function gamosPlane(shape, sizes, args) {
+      const v = args.map(gamosNumber);
+      const pos = new THREE.Vector3(v[0] || 0, v[1] || 0, v[2] || 0);
+      const n = args.length >= 6 ? new THREE.Vector3(v[3], v[4], v[5]).normalize() : new THREE.Vector3(0, 0, 1);
+      const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
+      return { kind: 'plane', shape, ...sizes, matrix: new THREE.Matrix4().compose(pos, q, new THREE.Vector3(1, 1, 1)) };
+    }
+
+    function gamosPosition(cls, args, src, warnings) {
+      const num = i => gamosNumber(args[i]);
+      switch (cls) {
+        case 'GmGenerDistPositionPoint':
+          return { kind: 'point', center: new THREE.Vector3(args[0] ? num(0) : 0, args[1] ? num(1) : 0, args[2] ? num(2) : 0) };
+        case 'GmGenerDistPositionInG4Volumes':
+        case 'GmGenerDistPositionInG4VolumesGeneral':
+          return { kind: 'volumes', names: args, surface: false };
+        case 'GmGenerDistPositionInG4Surfaces':
+          return { kind: 'volumes', names: args, surface: true };
+        case 'GmGenerDistPositionInUserVolumes':
+        case 'GmGenerDistPositionInUserSurfaces':
+        case 'GmGenerDistPositionDirectionInUserSurfaces': {
+          const t = args.findIndex(a => GAMOS_USER_SOLIDS.has(a.toUpperCase()));
+          if (t < 0) throw new Error(`${cls} needs a solid type (ORB, SPHERE, ELLIPSOID, TUBS, BOX or CONS)`);
+          const pre = args.slice(0, t).map(gamosNumber);
+          const p = mapTextSolid(args[t].toUpperCase(), args.slice(t + 1).map(gamosNumber));
+          const pos = new THREE.Vector3(pre[0] || 0, pre[1] || 0, pre[2] || 0);
+          // GAMOS docs: rotate about X, then Y, then Z, around (0,0,0) after the displacement
+          const rot = new THREE.Matrix4().makeRotationZ(pre[5] || 0).multiply(new THREE.Matrix4().makeRotationY(pre[4] || 0))
+                                         .multiply(new THREE.Matrix4().makeRotationX(pre[3] || 0));
+          const matrix = rot.multiply(new THREE.Matrix4().makeTranslation(pos.x, pos.y, pos.z));
+          return { kind: 'solid', p, matrix, surface: cls !== 'GmGenerDistPositionInUserVolumes' };
+        }
+        case 'GmGenerDistPositionLineSteps': {
+          const v = args.map(gamosNumber);
+          return { kind: 'line', start: new THREE.Vector3(v[0], v[1], v[2]), dir: new THREE.Vector3(v[3], v[4], v[5]),
+                   length: v[6] ? 20 * v[6] : null };
+        }
+        case 'GmGenerDistPositionSquare': return gamosPlane('square', { a: num(0) }, args.slice(1));
+        case 'GmGenerDistPositionRectangle': return gamosPlane('rectangle', { a: num(0), b: num(1) }, args.slice(2));
+        case 'GmGenerDistPositionDisc': return gamosPlane('circle', { a: num(0) }, args.slice(1));
+        case 'GmGenerDistPositionDiscGaussian': return gamosPlane('circle', { a: 2 * num(0) }, args.slice(1));
+        default:
+          warnings.push(`Source ${src}: ${cls} isn't drawn by Quick View; showing the origin`);
+          return { kind: 'point', center: new THREE.Vector3() };
+      }
+    }
+
+    function gamosDirection(cls, args, src, warnings) {
+      const v = args.map(gamosNumber);
+      const d = () => new THREE.Vector3(v[0], v[1], v[2]);
+      switch (cls) {
+        case 'GmGenerDistDirectionRandom': return { kind: 'iso' };
+        case 'GmGenerDistDirectionConst': return { kind: 'const', dir: d() };
+        case 'GmGenerDistDirectionCone': return { kind: 'cone', dir: d(), half: v[3] };
+        case 'GmGenerDistDirectionConeGaussian': return { kind: 'cone', dir: d(), half: 2 * v[3] };
+        case 'GmGenerDistDirectionCone2DGaussian': return { kind: 'cone', dir: d(), half: 2 * Math.max(v[3], v[4]) };
+        case 'GmGenerDistDirectionGaussian': return { kind: 'const', dir: d() };
+        default:
+          warnings.push(`Source ${src}: ${cls} directions aren't drawn; showing isotropic`);
+          return { kind: 'iso' };
+      }
+    }
+
+    function parseGamosMacro(text, warnings, errors) {
+      const sources = {}, order = [];
+      text.split(/\r?\n/).forEach((raw, i) => {
+        const line = raw.replace(/#.*$/, '').trim();
+        if (!line.startsWith('/gamos/generator')) return;
+        const w = tgWords(line), cmd = w[0], n = i + 1;
+        try {
+          const m = cmd.match(/^\/gamos\/generator\/add(SingleParticle|Isotope|DoubleBackToBackParticle)Source$/i);
+          if (m) {
+            if (w.length < 4) throw new Error(`${cmd} needs: SOURCE_NAME ${m[1] === 'Isotope' ? 'ISOTOPE ACTIVITY' : 'PARTICLE ENERGY'}`);
+            sources[w[1]] = { name: w[1], what: `${w[2]} ${w[3]}`, kind: m[1], pos: { kind: 'point', center: new THREE.Vector3() },
+                              dir: { kind: 'iso' }, extra: [], line: n };
+            order.push(w[1]);
+            return;
+          }
+          const src = sources[w[1]];
+          if (/\/(positionDist|directionDist|energyDist|timeDist|addVolumeOrSurface)$/.test(cmd) && !src) {
+            throw new Error(`source '${w[1]}' hasn't been added yet`);
+          }
+          if (/\/positionDist$/.test(cmd)) {
+            src.pos = gamosPosition(w[2], w.slice(3), w[1], warnings);
+            if (w[2] === 'GmGenerDistPositionDirectionInUserSurfaces') {
+              src.dir = { kind: 'focus', point: new THREE.Vector3().setFromMatrixPosition(src.pos.matrix) };
+            }
+          } else if (/\/directionDist$/.test(cmd)) {
+            if (w[2] !== 'GmGenerDistPositionDirectionInUserSurfaces') src.dir = gamosDirection(w[2], w.slice(3), w[1], warnings);
+          } else if (/\/addVolumeOrSurface$/.test(cmd)) {
+            src.extra.push(w.slice(2));
+          }
+        } catch (e) {
+          errors.push(`Macro line ${n}: ${e.message}`);
+        }
+      });
+      const emitters = [];
+      for (const name of order) {
+        const s = sources[name];
+        emitters.push({ name, label: `${name}: ${s.what}`, pos: s.pos, dir: s.dir });
+        s.extra.forEach((args, k) => {
+          let pos;
+          if (s.pos.kind === 'volumes') pos = { kind: 'volumes', names: args, surface: s.pos.surface };
+          else {
+            try { pos = gamosPosition(s.pos.surface ? 'GmGenerDistPositionInUserSurfaces' : 'GmGenerDistPositionInUserVolumes', args, name, warnings); }
+            catch (e) { errors.push(`Source ${name}: ${e.message}`); return; }
+          }
+          emitters.push({ name: `${name}+${k + 1}`, label: `${name} (+${k + 1})`, pos, dir: s.dir });
+        });
+      }
+      if (/\/gamos\/generator\//.test(text) && !/^\s*\/gamos\/generator\s+GmGenerator/m.test(text)) {
+        warnings.push('Macro: add "/gamos/generator GmGenerator" before the generator commands');
+      }
+      return emitters;
+    }
+
+    // --- + Add templates --------------------------------------------------------------
+    function uniqueIn(base, taken) {
+      const set = new Set(taken.map(t => t.toLowerCase()));
+      let name = base, i = 2;
+      while (set.has(name.toLowerCase())) name = base + i++;
+      return name;
+    }
+
+    function rotmLinesIfMissing() {
+      return gamosNames.rotms.includes('R00') ? [] : [':ROTM R00 0. 0. 0.'];
+    }
+
+    function insertGamosSolid(type) {
+      const taken = [...gamosNames.logicals, ...gamosNames.solids];
+      const base = type.charAt(0) + type.slice(1).toLowerCase();
+      const name = uniqueIn(base, taken);
+      const colour = TG_COLOURS[gamosNames.logicals.length % TG_COLOURS.length];
+      const lines = [`// ${type}: ${TG_PARAM_NAMES[type].join(' ')}`, ...rotmLinesIfMissing()];
+      if (['UNION', 'SUBTRACTION', 'INTERSECTION'].includes(type)) {
+        const a = uniqueIn(name + 'A', taken), b = uniqueIn(name + 'B', taken);
+        lines.push(`:SOLID ${a} BOX 30. 30. 30.`, `:SOLID ${b} TUBE 0. 15. 50.`, `:SOLID ${name} ${type} ${a} ${b} R00 0. 0. 30.`);
+      } else {
+        lines.push(`:SOLID ${name} ${type} ${TG_TEMPLATES[type]}`);
+      }
+      lines.push(`:VOLU ${name} ${name} G4_WATER`, `:PLACE ${name} 1 ${gamosNames.world} R00 0. 0. 0.`, `:COLOUR ${name} ${colour}`);
+      appendLines(geomEditor, lines);
+    }
+
+    const GAMOS_SOURCE_TEMPLATES = {
+      'Point, isotropic': n => [`/gamos/generator/addSingleParticleSource ${n} gamma 1.*MeV`,
+        `/gamos/generator/positionDist ${n} GmGenerDistPositionPoint 0. 0. 0.`,
+        `/gamos/generator/directionDist ${n} GmGenerDistDirectionRandom`],
+      'Disc beam': n => [`/gamos/generator/addSingleParticleSource ${n} e- 6.*MeV`,
+        `/gamos/generator/positionDist ${n} GmGenerDistPositionDisc 20. 0. 0. 300. 0. 0. -1.`,
+        `/gamos/generator/directionDist ${n} GmGenerDistDirectionConst 0. 0. -1.`],
+      'Gaussian disc beam': n => [`/gamos/generator/addSingleParticleSource ${n} proton 150.*MeV`,
+        `/gamos/generator/positionDist ${n} GmGenerDistPositionDiscGaussian 5. 0. 0. 300. 0. 0. -1.`,
+        `/gamos/generator/directionDist ${n} GmGenerDistDirectionConst 0. 0. -1.`],
+      'Square beam': n => [`/gamos/generator/addSingleParticleSource ${n} gamma 6.*MeV`,
+        `/gamos/generator/positionDist ${n} GmGenerDistPositionSquare 50. 0. 0. 300. 0. 0. -1.`,
+        `/gamos/generator/directionDist ${n} GmGenerDistDirectionConst 0. 0. -1.`],
+      'Rectangle beam': n => [`/gamos/generator/addSingleParticleSource ${n} gamma 6.*MeV`,
+        `/gamos/generator/positionDist ${n} GmGenerDistPositionRectangle 50. 30. 0. 0. 300. 0. 0. -1.`,
+        `/gamos/generator/directionDist ${n} GmGenerDistDirectionConst 0. 0. -1.`],
+      'Point, cone': n => [`/gamos/generator/addSingleParticleSource ${n} gamma 1.*MeV`,
+        `/gamos/generator/positionDist ${n} GmGenerDistPositionPoint 0. 0. 300.`,
+        `/gamos/generator/directionDist ${n} GmGenerDistDirectionCone 0. 0. -1. 15.*deg`],
+      'Isotope in a volume': n => [`/gamos/generator/addIsotopeSource ${n} F18 1.E6*becquerel`,
+        `/gamos/generator/positionDist ${n} GmGenerDistPositionInG4Volumes ${firstVolume()}`,
+        `/gamos/generator/directionDist ${n} GmGenerDistDirectionRandom`],
+      'On a volume surface': n => [`/gamos/generator/addSingleParticleSource ${n} gamma 1.*MeV`,
+        `/gamos/generator/positionDist ${n} GmGenerDistPositionInG4Surfaces ${firstVolume()}`,
+        `/gamos/generator/directionDist ${n} GmGenerDistDirectionRandom`],
+      'In a user volume': n => [`/gamos/generator/addSingleParticleSource ${n} gamma 1.*MeV`,
+        `/gamos/generator/positionDist ${n} GmGenerDistPositionInUserVolumes 0. 0. 0. 0. 0. 0. ORB 20.`,
+        `/gamos/generator/directionDist ${n} GmGenerDistDirectionRandom`],
+      'On a user surface, inward': n => [`/gamos/generator/addSingleParticleSource ${n} gamma 1.*MeV`,
+        `/gamos/generator/positionDist ${n} GmGenerDistPositionDirectionInUserSurfaces 0. 0. 0. 0. 0. 0. ORB 150.`,
+        `/gamos/generator/directionDist ${n} GmGenerDistPositionDirectionInUserSurfaces`],
+      'Line of steps': n => [`/gamos/generator/addSingleParticleSource ${n} gamma 1.*MeV`,
+        `/gamos/generator/positionDist ${n} GmGenerDistPositionLineSteps -50. 0. 0. 1. 0. 0. 5.`,
+        `/gamos/generator/directionDist ${n} GmGenerDistDirectionRandom`],
+      'Back-to-back pair': n => [`/gamos/generator/addDoubleBackToBackParticleSource ${n} gamma 511*keV`,
+        `/gamos/generator/positionDist ${n} GmGenerDistPositionPoint 0. 0. 0.`,
+        `/gamos/generator/directionDist ${n} GmGenerDistDirectionRandom`]
+    };
+
+    function firstVolume() {
+      return gamosNames.placed.find(n => n !== gamosNames.world) || '<LV_NAME>';
+    }
+
+    function insertGamosSource(label) {
+      const names = parsedSources.map(s => s.name);
+      const name = uniqueIn('source', names);
+      const lines = GAMOS_SOURCE_TEMPLATES[label](name);
+      const text = macroEditor.getValue();
+      if (!/^\s*\/gamos\/generator\s+GmGenerator/m.test(text)) lines.unshift('/gamos/generator GmGenerator');
+      // keep sources ahead of /run/beamOn
+      const beamOn = text.split('\n').findIndex(l => /^\s*\/run\/beamOn/.test(l));
+      if (beamOn >= 0) {
+        showTab('macro');
+        macroEditor.replaceRange(lines.join('\n') + '\n\n', { line: beamOn, ch: 0 });
+        macroEditor.scrollIntoView({ line: beamOn + lines.length, ch: 0 });
+        updateGeometry();
+      } else {
+        appendLines(macroEditor, lines);
+      }
+    }
+
+    // --- click menu -------------------------------------------------------------------
+    function gamosGeomMenu(cm, lineNo) {
+      const words = tgWords(cm.getLine(lineNo).replace(/\/\/.*$/, ''));
+      const tag = (words[0] || '').toUpperCase();
+      const text = cm.getValue();
+      const has = re => re.test(text);
+      const groups = [];
+      const after = (t) => () => focusPlaceholder(cm, insertLineAfter(cm, lineNo, t));
+      let title = null;
+
+      const volumeItems = vol => {
+        const items = [];
+        if (!gamosNames.placed.includes(vol) && vol !== gamosNames.world) {
+          items.push({ label: `Place it (:PLACE in ${gamosNames.world})`, apply: after(`:PLACE ${vol} 1 ${gamosNames.world} R00 <x> <y> <z>`) });
+        } else if (vol !== gamosNames.world) {
+          items.push({ label: 'Place another copy (:PLACE)', apply: after(`:PLACE ${vol} <copyNo> ${gamosNames.world} R00 <x> <y> <z>`) });
+        }
+        if (!has(new RegExp(`^\\s*:COLOU?R\\s+${escapeRegExp(vol)}\\s`, 'mi'))) items.push({ label: 'Colour (:COLOUR r g b)', apply: after(`:COLOUR ${vol} <r> <g> <b>`) });
+        if (!has(new RegExp(`^\\s*:VIS\\s+${escapeRegExp(vol)}\\s`, 'mi'))) items.push({ label: 'Visibility (:VIS)', apply: after(`:VIS ${vol} <ON|OFF>`) });
+        return items;
+      };
+      const paramItems = (type, given, insertAt) => {
+        const names = TG_PARAM_NAMES[type], fixed = TG_FIXED_COUNTS[type];
+        if (!names || !fixed || given >= fixed) return [];
+        const missing = names.slice(given, fixed);
+        return [{ label: `Add missing: ${missing.join(' ')}`, apply: () => {
+          const ch = insertAt();
+          cm.replaceRange(' ' + missing.map(m => `<${m}>`).join(' '), { line: lineNo, ch });
+          focusPlaceholder(cm, lineNo);
+        } }];
+      };
+      const wordEnd = (k) => {
+        const line = cm.getLine(lineNo);
+        let idx = 0;
+        for (let i = 0; i <= k; i++) { const at = line.indexOf(words[i], idx); idx = at + words[i].length; }
+        return idx;
+      };
+
+      if (tag === ':SOLID' && words[2]) {
+        const type = normalizeTgType(words[2]);
+        title = `${words[1]}: ${type} ${(TG_PARAM_NAMES[type] || []).join(' ')}`;
+        groups.push({ label: 'Parameters', items: paramItems(type, words.length - 3, () => wordEnd(words.length - 1)) });
+        if (!has(new RegExp(`^\\s*:VOLU\\s+\\S+\\s+${escapeRegExp(words[1])}\\s`, 'mi'))) {
+          groups.push({ label: 'Volume', items: [{ label: 'Make a volume from it (:VOLU)', apply: after(`:VOLU ${words[1]} ${words[1]} <material>`) }] });
+        }
+      } else if (tag === ':VOLU' && words[1]) {
+        const inline = words.length >= 4 && TG_TYPES.has(normalizeTgType(words[2])) && !gamosNames.solids.includes(words[2]);
+        const type = inline ? normalizeTgType(words[2]) : null;
+        title = inline ? `${words[1]}: ${type} ${(TG_PARAM_NAMES[type] || []).join(' ')} material` : `Volume ${words[1]}`;
+        if (inline) groups.push({ label: 'Parameters', items: paramItems(type, words.length - 4, () => wordEnd(words.length - 2)) });
+        groups.push({ label: 'Placement & look', items: volumeItems(words[1]) });
+      } else if (tag === ':PLACE' && words[1]) {
+        title = `Placement of ${words[1]}: volume copyNo parent rotm x y z`;
+        const items = volumeItems(words[1]).filter(it => !/Place it/.test(it.label));
+        if (words[4] && !gamosNames.rotms.includes(words[4]) && !isPlaceholder(words[4])) {
+          items.unshift({ label: `Define rotation ${words[4]} (:ROTM)`, apply: after(`:ROTM ${words[4]} <rx> <ry> <rz>`) });
+        }
+        groups.push({ label: 'Placement & look', items });
+      } else {
+        return null;
+      }
+      groups.push({ label: 'New', items: [
+        { label: 'Rotation (:ROTM name rx ry rz)', apply: after(`:ROTM <name> <rx> <ry> <rz>`) },
+        { label: 'Parameter (:P name value)', apply: after(`:P <name> <value>`) }
+      ] });
+      return { title, groups };
+    }
+
+    function gamosMacroMenu(cm, lineNo) {
+      const w = tgWords(cm.getLine(lineNo).replace(/#.*$/, ''));
+      if (!w[0] || !/^\/gamos\/generator\/(add\w+Source|positionDist|directionDist|energyDist)$/i.test(w[0]) || !w[1]) return null;
+      const name = w[1];
+      let last = lineNo;
+      cm.eachLine(h => {
+        const t = tgWords(h.text.replace(/#.*$/, ''));
+        if (t[0] && t[0].startsWith('/gamos/generator/') && t[1] === name) last = Math.max(last, cm.getLineNumber(h));
+      });
+      const text = cm.getValue();
+      const hasCmd = c => new RegExp(`^\\s*\\/gamos\\/generator\\/${c}\\s+${escapeRegExp(name)}\\s`, 'mi').test(text);
+      const add = t => () => focusPlaceholder(cm, insertLineAfter(cm, last, t));
+      const line = (cmd, cls, args) => `/gamos/generator/${cmd} ${name} ${cls}${args.length ? ' ' + args.map(a => `<${a}>`).join(' ') : ''}`;
+      const verb = has => has ? 'Replace' : 'Set';
+      return {
+        title: `Source ${name}`,
+        groups: [
+          { label: `Position (${verb(hasCmd('positionDist')).toLowerCase()})`, items: Object.entries(GAMOS_POS_ARGS).map(([cls, args]) => ({
+              label: cls.replace('GmGenerDistPosition', ''), apply: add(line('positionDist', cls, args)) })) },
+          { label: `Direction (${verb(hasCmd('directionDist')).toLowerCase()})`, items: Object.entries(GAMOS_DIR_ARGS).map(([cls, args]) => ({
+              label: cls.replace('GmGenerDistDirection', ''), apply: add(line('directionDist', cls, args)) })) },
+          { label: 'Energy', items: hasCmd('energyDist') ? [] : [
+              { label: 'Constant', apply: add(line('energyDist', 'GmGenerDistEnergyConstant', ['ENERGY'])) },
+              { label: 'Flat between two energies', apply: add(line('energyDist', 'GmGenerDistEnergyRandomFlat', ['ENERGY_MIN', 'ENERGY_MAX'])) }] }
+        ]
+      };
+    }
+
+    const FORMAT = {
+      geomMode: 'g4text',
+      geomFileName: 'geometry.geom',
+      macroFileName: 'run.in',
+      isGeometryFile: n => /\.(geom|tg|txt)$/i.test(n),
+      defaultGeom: `// GAMOS geometry (Geant4 text format)
+// Lengths are mm and angles are deg unless a unit is given (e.g. 10.*cm)
+:ROTM R00 0. 0. 0.
+
+:VOLU world BOX 500. 500. 500. G4_AIR
+:VIS world OFF
+
+:VOLU phantom BOX 120. 120. 90. G4_WATER
+:PLACE phantom 1 world R00 0. 0. 0.
+:COLOUR phantom 0.25 0.41 0.88
+
+:SOLID applicator TUBS 20. 42. 90. 0. 360.
+:VOLU applicator applicator G4_PLEXIGLASS
+:PLACE applicator 1 world R00 0. 0. 200.
+:COLOUR applicator 0.85 0.85 0.85
+`,
+      defaultMacro: `# GAMOS run macro
+/gamos/setParam GmGeometryFromText:FileName geometry.geom
+/gamos/geometry GmGeometryFromText
+/gamos/physicsList GmEMPhysics
+/gamos/generator GmGenerator
+/run/initialize
+
+/gamos/generator/addSingleParticleSource beam e- 6.*MeV
+/gamos/generator/positionDist beam GmGenerDistPositionDisc 20. 0. 0. 400. 0. 0. -1.
+/gamos/generator/directionDist beam GmGenerDistDirectionConst 0. 0. -1.
+
+/run/beamOn 1000
+`,
+      parse(geomText, macroText) {
+        const warnings = [], errors = [];
+        const geometry = parseGamosGeometry(geomText, warnings, errors);
+        const sources = parseGamosMacro(macroText, warnings, errors);
+        return { geometry, sources, warnings, errors };
+      },
+      addGroups() {
+        const solidTypes = [...Object.keys(TG_TEMPLATES), 'UNION', 'SUBTRACTION', 'INTERSECTION'];
+        return [
+          { label: 'Solids', items: solidTypes.map(t => ({ label: t, apply: () => insertGamosSolid(t) })) },
+          { label: 'Sources', items: Object.keys(GAMOS_SOURCE_TEMPLATES).map(l => ({ label: l, apply: () => insertGamosSource(l) })) }
+        ];
+      },
+      menuFor(which, cm, line) {
+        return which === 'geom' ? gamosGeomMenu(cm, line) : gamosMacroMenu(cm, line);
+      }
+    };
+
+  </script>
+</body>
+</html>

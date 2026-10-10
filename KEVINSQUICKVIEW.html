@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- Made by your friend, Kevin  -->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kevin's Quick View </title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
@@ -22,17 +22,22 @@
       --ok: #4caf50;
       --warn: #FFA00F;
       --err: #9D162E;
+      --scorer-highlight: #00ffcc;
     }
     html, body { height: 100%; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; overflow: hidden; }
     .container { display: grid; grid-template-columns: 42% 58%; height: 100vh; }
     .input-panel { border-right: 1px solid #303030; display: grid; grid-template-rows: auto 1fr auto auto; background: var(--panel); }
     .viewer-panel { position: relative; background: var(--bg); }
-    .header { background: var(--brand); padding: 12px 16px; font-weight: 700; letter-spacing: .2px; }
+    .header { background: var(--brand); padding: 12px 16px; font-weight: 700; letter-spacing: .2px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .format-nav { display: flex; gap: 4px; }
+    .format-nav a { color: #fff; text-decoration: none; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,.4); }
+    .format-nav a:hover { background: rgba(255,255,255,.15); }
+    .format-nav a.active { background: #fff; color: var(--brand); border-color: #fff; }
     .subheader { display:flex; gap:8px; align-items:center; padding: 8px 12px; background: var(--panel-2); border-bottom:1px solid #303030; flex-wrap: wrap; }
     .subheader select, .subheader input[type="range"], .subheader button { background:#1a1a1a; border:1px solid #333; color:var(--text); border-radius:6px; padding:6px 10px; font-size:12px; }
     .editor { height: 100%; }
-    .controls { padding: 10px 12px; background: var(--panel-2); border-top: 1px solid #303030; display:flex; flex-wrap:wrap; gap:8px; }
+    .controls { padding: 10px 12px; background: var(--panel-2); border-top: 1px solid #303030; display:flex; flex-wrap:wrap; gap:8px; align-items: center; }
     .btn { background: var(--brand); border: none; color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight:600; font-size: 12px; }
     .btn.secondary { background: #2d2d2d; border:1px solid #3a3a3a; color:#ddd; }
     .btn:hover { background: var(--brand-2); }
@@ -49,45 +54,87 @@
     .legend { position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.7); backdrop-filter: blur(3px); border:1px solid #333; border-radius:8px; padding:8px 10px; font-size:11px; }
     .badge { display:inline-block; padding:2px 6px; font-size:10px; border-radius:999px; border:1px solid #333; background:#151515; color:#bbb; }
     .cm-error-line { background: rgba(244,67,54,.15) !important; }
+    #stlFileInput { display: none; }
+    .stl-list { padding: 6px 12px; background: var(--panel-2); border-top: 1px solid #303030; font-size: 11px; max-height: 80px; overflow: auto; }
+    .stl-item { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+    .stl-item input[type="checkbox"] { accent-color: var(--brand); }
+    .stl-placed { color: #8be28b; }
+    .stl-unplaced { color: #ffbd5a; }
+    .color-swatch { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #555; display: inline-block; }
+    .param-menu { position: fixed; z-index: 50; display: none; background: #1a1a1a; border: 1px solid #3a3a3a; border-radius: 8px; padding: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.5); font-size: 12px; }
+    .param-menu .title { color: #bbb; padding: 2px 4px 6px; }
+    .param-menu select { background: #111; color: var(--text); border: 1px solid #333; border-radius: 6px; font-size: 12px; min-width: 240px; outline: none; }
+    .param-menu optgroup { color: #8be28b; font-style: normal; }
+    .param-menu option { color: var(--text); padding: 2px 4px; }
   </style>
 </head>
 <body>
   <div class="container">
    <div class="input-panel" style="display: flex; flex-direction: column; height: 100vh;">
-  <div class="header" style="background: #00693E;">Kevin's Quick View for TOPAS MC</div>
-  <div class="subheader" style="height: 120px; overflow:hidden">
+      <div class="header" style="background: #00693E;">
+        <span>Kevin's Quick View for TOPAS MC</span>
+        <nav class="format-nav"><a href="index.html" class="active">TOPAS</a><a href="gamos.html">GAMOS</a><a href="geant4.html">Geant4</a></nav>
+      </div>
+      <div class="subheader" style="overflow:hidden">
         <button class="btn" id="btnUpdate">Update Geometry</button>
+        <button class="btn secondary" id="btnDownload">Save Config</button>
         <button class="btn secondary" id="btnFit">Fit to View</button>
         <button class="btn secondary" id="btnReset">Reset Camera</button>
         <button class="btn secondary" id="btnWire">Wireframe</button>
         <button class="btn secondary" id="btnAxes">Axes</button>
+        <button class="btn secondary" id="btnLoadSTL">Load STL(s)</button>
+        <button class="btn secondary" id="btnClearSTL">Clear STLs</button>
+        <select id="shapeInsert" title="Append a TOPAS shape or source with all of its parameters"><option value="">+ Add</option></select>
+        <label class="badge" title="How RotX/RotY/RotZ are applied">Rotations
+          <select id="rotConv">
+            <option value="g4">TOPAS (Geant4 frame)</option>
+            <option value="active">Active X·Y·Z</option>
+          </select>
+        </label>
         <label class="badge">Opacity <input id="opacity" type="range" min="0.05" max="1" step="0.05" value="0.7" style="accent-color: #12312B;" /></label>
+        <label class="badge">Beam ⌀ <input id="beamRadius" type="number" value="30" min="1" max="500" step="1" style="width: 50px; background: #1a1a1a; color: white; border: 1px solid #333; border-radius: 4px; padding: 2px 4px;"/> mm</label>
+        <input type="file" id="stlFileInput" multiple accept=".stl" />
       </div>
-       <div class="editor" id="editor" style="flex: 1; min-height: 0; height: 100%;"></div>
-  <div class="controls">
+      <div class="stl-list" id="stlList"></div>
+      <div class="editor" id="editor" style="flex: 1; min-height: 0; height: 100%;"></div>
+      <div class="controls">
         <span class="badge">Views:</span>
         <button class="btn secondary" data-view="iso">Isometric</button>
         <button class="btn secondary" data-view="top">Top</button>
         <button class="btn secondary" data-view="front">Front</button>
         <button class="btn secondary" data-view="right">Right</button>
+        <span id="scorerIndicator" class="badge" style="display: none; border-color: var(--scorer-highlight); color: var(--scorer-highlight);">Scorer Active</span>
      </div>
- <div class="warnings-panel" id="warnings" style="flex-shrink: 0; max-height: 200px; overflow: auto;"></div>
-</div>
-    
-    <div class="viewer-panel">
-		  <div style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10; padding: 8px 16px; border-radius: 4px; font-size: 12px; text-align: center; line-height: 1.4;">
-    Kevin Willy, Dartmouth College
-  </div>
-      <canvas id="viewer"></canvas>
-      <div class="legend">Scroll: zoom • Drag: orbit • Right-drag: pan</div>
+     <div class="warnings-panel" id="warnings" style="flex-shrink: 0; max-height: 200px; overflow: auto;"></div>
     </div>
+
+    <div class="viewer-panel">
+      <div style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10; padding: 8px 16px; border-radius: 4px; font-size: 12px; text-align: center; line-height: 1.4;">
+        Kevin Willy, Dartmouth College
+      </div>
+      <canvas id="viewer"></canvas>
+      <div class="legend">Scroll: zoom • Drag: orbit • Right-drag: pan • Axes: TOPAS X red, Y green, Z blue (Z up)</div>
+    </div>
+  </div>
+  <div class="param-menu" id="paramMenu">
+    <div class="title" id="paramMenuTitle"></div>
+    <select id="paramMenuList"></select>
   </div>
 
   <script>
     let scene, camera, renderer, controls, axesHelper;
+    // Everything TOPAS (components, beams, STLs, axes) lives in topasRoot and is built in
+    // TOPAS coordinates (mm, right-handed). topasRoot only turns TOPAS +Z to screen-up.
+    let topasRoot = new THREE.Group();
     let geometryGroup = new THREE.Group();
-    let wireframeMode = false; 
+    let beamGroup = new THREE.Group();
+    let stlGroup = new THREE.Group();
+    let scorerGroup = new THREE.Group();  // BoxHelpers are in world coordinates, so they sit outside topasRoot
+    let stlMeshes = {};
+    let wireframeMode = false;
     let showAxes = true;
+    let currentBeamRadius = 30;
+    let rotConvention = 'g4';
 
     class SimpleOrbitControls {
       constructor(camera, domElement) {
@@ -117,7 +164,7 @@
         this.setupEventListeners();
         this.update();
       }
-      
+
       setupEventListeners() {
         this.domElement.addEventListener('mousedown', this.onMouseDown.bind(this));
         this.domElement.addEventListener('wheel', this.onMouseWheel.bind(this));
@@ -125,7 +172,7 @@
         document.addEventListener('mousemove', this.onMouseMove.bind(this));
         document.addEventListener('mouseup', this.onMouseUp.bind(this));
       }
-      
+
       onMouseDown(event) {
         if (!this.enabled) return;
         event.preventDefault();
@@ -137,7 +184,7 @@
           this.panStart.set(event.clientX, event.clientY);
         }
       }
-      
+
       onMouseMove(event) {
         if (!this.enabled) return;
         event.preventDefault();
@@ -156,12 +203,12 @@
           this.update();
         }
       }
-      
+
       onMouseUp(event) {
         if (!this.enabled) return;
         this.state = 'NONE';
       }
-      
+
       onMouseWheel(event) {
         if (!this.enabled) return;
         event.preventDefault();
@@ -172,10 +219,10 @@
         }
         this.update();
       }
-      
+
       rotateLeft(angle) { this.sphericalDelta.theta -= angle; }
       rotateUp(angle) { this.sphericalDelta.phi -= angle; }
-      
+
       pan(deltaX, deltaY) {
         const offset = new THREE.Vector3();
         const position = this.camera.position;
@@ -185,25 +232,25 @@
         this.panLeft(2 * deltaX * targetDistance / this.domElement.clientHeight, this.camera.matrix);
         this.panUp(2 * deltaY * targetDistance / this.domElement.clientHeight, this.camera.matrix);
       }
-      
+
       panLeft(distance, objectMatrix) {
         const v = new THREE.Vector3();
         v.setFromMatrixColumn(objectMatrix, 0);
         v.multiplyScalar(-distance);
         this.panOffset.add(v);
       }
-      
+
       panUp(distance, objectMatrix) {
         const v = new THREE.Vector3();
         v.setFromMatrixColumn(objectMatrix, 1);
         v.multiplyScalar(distance);
         this.panOffset.add(v);
       }
-      
+
       dollyIn(dollyScale) { this.scale /= dollyScale; }
       dollyOut(dollyScale) { this.scale *= dollyScale; }
       getZoomScale() { return Math.pow(0.95, this.zoomSpeed); }
-      
+
       update() {
         const offset = new THREE.Vector3();
         const quat = new THREE.Quaternion().setFromUnitVectors(this.camera.up, new THREE.Vector3(0, 1, 0));
@@ -238,87 +285,84 @@
       camera.position.set(300, 240, 300);
       renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
       renderer.setSize(rect.width, rect.height);
-      const amb = new THREE.AmbientLight(0xffffff, 0.6); 
+      const amb = new THREE.AmbientLight(0xffffff, 0.6);
       scene.add(amb);
-      const dir = new THREE.DirectionalLight(0xffffff, 0.7); 
-      dir.position.set(200,200,100); 
+      const dir = new THREE.DirectionalLight(0xffffff, 0.7);
+      dir.position.set(200,200,100);
       scene.add(dir);
       controls = new SimpleOrbitControls(camera, canvas);
-      axesHelper = new THREE.AxesHelper(100);
+
+      // TOPAS (x, y, z) -> screen (x, z, -y): a proper rotation, so handedness is kept
+      topasRoot.rotation.x = -Math.PI / 2;
+      scene.add(topasRoot);
+      scene.add(scorerGroup);
+
+      axesHelper = new THREE.Group();
+      axesHelper.add(new THREE.AxesHelper(100));
+      [['X', 0xff5555, [115, 0, 0]], ['Y', 0x55ff55, [0, 115, 0]], ['Z', 0x5599ff, [0, 0, 115]]].forEach(([t, c, p]) => {
+        const s = makeAxisLabel(t, c);
+        s.position.set(...p);
+        axesHelper.add(s);
+      });
       axesHelper.visible = showAxes;
-      scene.add(axesHelper);
-      scene.add(geometryGroup);
+      topasRoot.add(axesHelper);
+      topasRoot.add(geometryGroup);
+      topasRoot.add(beamGroup);
+      topasRoot.add(stlGroup);
       window.addEventListener('resize', onResize);
       animate();
     }
-    
+
     function onResize(){
       const canvas = document.getElementById('viewer');
       const rect = canvas.getBoundingClientRect();
-      camera.aspect = rect.width/rect.height; 
+      camera.aspect = rect.width/rect.height;
       camera.updateProjectionMatrix();
       renderer.setSize(rect.width, rect.height);
     }
-    
+
     function animate(){
       requestAnimationFrame(animate);
       renderer.render(scene, camera);
     }
 
     let editor, errorMarks = [];
-    
+
     function initEditor(){
       const editorElement = document.getElementById('editor');
       editor = CodeMirror(editorElement, {
-        value: `# Parent-Daughter Geometry Example
+        value: `# Example with beam source & scorer
 s:Ge/World/Type = "TsBox"
 d:Ge/World/HLX = 50 cm
 d:Ge/World/HLY = 50 cm
 d:Ge/World/HLZ = 50 cm
 s:Ge/World/Material = "Air"
 
-# Large box (parent)
-s:Ge/Box1/Type = "TsBox"
-s:Ge/Box1/Parent = "World"
-d:Ge/Box1/HLX = 20 cm
-d:Ge/Box1/HLY = 20 cm
-d:Ge/Box1/HLZ = 20 cm
-d:Ge/Box1/TransX = -20 cm
-s:Ge/Box1/Material = "Water"
+# Patient target (placeholder)
+s:Ge/Patient/Type = "TsBox"
+s:Ge/Patient/Parent = "World"
+d:Ge/Patient/HLX = 12 cm
+d:Ge/Patient/HLY = 12 cm
+d:Ge/Patient/HLZ = 9 cm
+s:Ge/Patient/Material = "Water"
 
-# Daughter box cuts into parent
-s:Ge/CutBox/Type = "TsBox"
-s:Ge/CutBox/Parent = "Box1"
-d:Ge/CutBox/HLX = 8 cm
-d:Ge/CutBox/HLY = 8 cm
-d:Ge/CutBox/HLZ = 8 cm
-d:Ge/CutBox/TransX = 0 cm
-s:Ge/CutBox/Material = "Air"
+# Beam position (where the phase space lives)
+s:Ge/BeamPosition/Type = "Group"
+s:Ge/BeamPosition/Parent = "World"
+d:Ge/BeamPosition/TransX = 0 mm
+d:Ge/BeamPosition/TransY = 0 mm
+d:Ge/BeamPosition/TransZ = 250 mm
+d:Ge/BeamPosition/RotX = 180 deg
 
-# Hollow Cylinder (parent)
-s:Ge/HollowCyl/Type = "TsCylinder"
-s:Ge/HollowCyl/Parent = "World"
-d:Ge/HollowCyl/RMin = 63.9 mm
-d:Ge/HollowCyl/RMax = 88.9 mm
-d:Ge/HollowCyl/HL = 84.15 mm
-d:Ge/HollowCyl/TransZ = 88.75 mm
-s:Ge/HollowCyl/Material = "Lead"
+# Phase space source
+s:So/MySource/Type = "PhaseSpace"
+s:So/MySource/Component = "BeamPosition"
+s:So/MySource/PhaseSpaceFileName = "Mobetron_9MeV_A6I6_1p2"
 
-# Daughter sphere inside hollow cylinder
-s:Ge/SphereInCyl/Type = "TsSphere"
-s:Ge/SphereInCyl/Parent = "HollowCyl"
-d:Ge/SphereInCyl/RMax = 50 mm
-d:Ge/SphereInCyl/TransZ = 0 cm
-s:Ge/SphereInCyl/Material = "Copper"
-
-# Multi-level: grand-daughter cuts into daughter
-s:Ge/InnerBox/Type = "TsBox"
-s:Ge/InnerBox/Parent = "CutBox"
-d:Ge/InnerBox/HLX = 3 cm
-d:Ge/InnerBox/HLY = 3 cm
-d:Ge/InnerBox/HLZ = 3 cm
-d:Ge/InnerBox/TransX = 0 cm
-s:Ge/InnerBox/Material = "Aluminum"
+# Validation Dose Scorer
+s:Sc/DoseScorer/Quantity = "DoseToWater"
+s:Sc/DoseScorer/Component = "Patient"
+s:Sc/DoseScorer/OutputFile = "dose_output"
 `,
         mode: 'properties',
         theme: 'material-darker',
@@ -327,23 +371,20 @@ s:Ge/InnerBox/Material = "Aluminum"
         tabSize: 2,
         indentUnit: 2,
       });
-		  const cmWrapper = editorElement.querySelector('.CodeMirror');
-  if (cmWrapper) {
-    cmWrapper.style.height = '100%';
-  }
+      const cmWrapper = editorElement.querySelector('.CodeMirror');
+      if (cmWrapper) {
+        cmWrapper.style.height = '100%';
+      }
       editor.on('change', debounce(updateGeometry, 600));
     }
 
     function colorNameToHex(colorName) {
       const colorMap = {
-        // Basic colors
         'white': 0xffffff, 'black': 0x000000,
         'red': 0xff0000, 'green': 0x00ff00, 'blue': 0x0000ff,
         'yellow': 0xffff00, 'cyan': 0x00ffff, 'magenta': 0xff00ff,
         'orange': 0xff8800, 'purple': 0x800080, 'pink': 0xffc0cb,
         'brown': 0x8b4513, 'gray': 0x808080, 'grey': 0x808080,
-        
-        // Extended colors
         'lightblue': 0xadd8e6, 'darkblue': 0x00008b,
         'lightgreen': 0x90ee90, 'darkgreen': 0x006400,
         'lightgray': 0xd3d3d3, 'darkgray': 0xa9a9a9,
@@ -355,197 +396,750 @@ s:Ge/InnerBox/Material = "Aluminum"
         'teal': 0x008080, 'maroon': 0x800000,
         'skyblue': 0x87ceeb, 'grass': 0x7cfc00
       };
-      
       const name = colorName.toLowerCase().trim();
+      if (userColors[name] !== undefined) return userColors[name];
       return colorMap[name] !== undefined ? colorMap[name] : 0xffffff;
     }
 
     const materials = {
       'Air': { color: 0x87ceeb, opacity: 0.15 },
+      'G4_AIR': { color: 0x87ceeb, opacity: 0.15 },
       'Water': { color: 0x4169e1, opacity: 0.55 },
+      'G4_WATER': { color: 0x4169e1, opacity: 0.55 },
       'Aluminum': { color: 0xc0c0c0, opacity: 0.8 },
       'Lead': { color: 0x2f2f2f, opacity: 0.9 },
       'Copper': { color: 0xb87333, opacity: 0.8 },
+      'Brass': { color: 0xb5a642, opacity: 0.8 },
       'Steel': { color: 0x708090, opacity: 0.8 },
+      'G4_TISSUE_SOFT_ICRP': { color: 0xff9988, opacity: 0.5 },
+      'G4_BONE_CORTICAL_ICRP': { color: 0xf0e0c0, opacity: 0.6 },
       'Default': { color: 0xffffff, opacity: 0.7 }
     };
 
     let parsedGeometry = {};
+    let parsedSources = {};
+    let parsedScorers = {};
     let nameToLine = {};
+    let userColors = {};
     let currentOpacity = 0.7;
+
+    // ---------------------------------------------------------------------------------
+    // TOPAS parameter parsing: every parameter goes into a store first so values can
+    // reference each other ("d:Ge/A/TransZ = Ge/World/HLZ - 5 cm"). Lengths -> mm, angles -> rad.
+    // ---------------------------------------------------------------------------------
+    const UNIT_FACTORS = {
+      nm: 1e-6, um: 1e-3, mm: 1, cm: 10, m: 1000, km: 1e6,
+      rad: 1, mrad: 1e-3, deg: Math.PI / 180, degree: Math.PI / 180, degrees: Math.PI / 180
+    };
+    const REF_RE = /^[A-Za-z]{2}\/[^\/\s]+\/\S+$/;
+    const NUM_RE = /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/;
+    let paramStore = new Map();
+    let resolveCache = new Map();
+
+    function unitFactor(u) {
+      const f = UNIT_FACTORS[u.toLowerCase()];
+      return f !== undefined ? f : 1;  // energies, densities etc. are not used for drawing
+    }
+
+    function stripComment(s) {
+      let inQuote = false;
+      for (let i = 0; i < s.length; i++) {
+        if (s[i] === '"') inQuote = !inQuote;
+        else if (s[i] === '#' && !inQuote) return s.slice(0, i);
+      }
+      return s;
+    }
+
+    function resolveRef(name, stack = new Set()) {
+      const key = name.toLowerCase();
+      if (resolveCache.has(key)) return resolveCache.get(key);
+      const entry = paramStore.get(key);
+      if (!entry) throw new Error(`Unknown parameter '${name}'`);
+      if (stack.has(key)) throw new Error(`Circular reference through '${name}'`);
+      stack.add(key);
+      const result = { value: evaluateParam(entry, stack), dim: entry.kind[0] === 'd' };
+      stack.delete(key);
+      resolveCache.set(key, result);
+      return result;
+    }
+
+    function evaluateParam(entry, stack) {
+      const base = entry.kind[0];
+      const raw = entry.raw.trim();
+      if (entry.kind.includes('v')) return parseVector(raw, base, stack);
+      if (base === 's') {
+        const q = raw.match(/"([^"]*)"/);
+        if (q) return q[1];
+        return REF_RE.test(raw) ? resolveRef(raw, stack).value : raw;
+      }
+      if (base === 'b') return /^"?\s*(true|t|1)\b/i.test(raw);
+      if (base === 'd' || base === 'u' || base === 'i') return evalExpr(raw, stack);
+      return raw;
+    }
+
+    // TOPAS expressions: operands separated by + - * / with spaces, unit last.
+    // The unit applies to plain numbers; referenced lengths are already in mm.
+    function evalExpr(raw, stack) {
+      const toks = raw.split(/\s+/).filter(Boolean);
+      let factor = 1;
+      if (toks.length > 1) {
+        const last = toks[toks.length - 1];
+        if (!NUM_RE.test(last) && !REF_RE.test(last) && !/^[-+*\/]$/.test(last)) {
+          toks.pop();
+          factor = unitFactor(last);
+        }
+      }
+      let total = 0, term = 1, termDim = false, sign = 1, op = '*', expectOperand = true;
+      for (const t of toks) {
+        if (expectOperand) {
+          let v, dim = false;
+          if (NUM_RE.test(t)) v = parseFloat(t);
+          else if (REF_RE.test(t.replace(/^-/, ''))) {
+            const r = resolveRef(t.replace(/^-/, ''), stack);
+            v = t.startsWith('-') ? -r.value : r.value;
+            dim = r.dim;
+          } else throw new Error(`Cannot parse '${t}' in '${raw}'`);
+          term = op === '/' ? term / v : term * v;
+          termDim = termDim || dim;
+          expectOperand = false;
+        } else {
+          if (t === '+' || t === '-') {
+            total += sign * term * (termDim ? 1 : factor);
+            sign = t === '-' ? -1 : 1; term = 1; termDim = false; op = '*';
+          } else if (t === '*' || t === '/') {
+            op = t;
+          } else throw new Error(`Unexpected '${t}' in '${raw}'`);
+          expectOperand = true;
+        }
+      }
+      if (expectOperand) throw new Error(`Cannot parse value '${raw}'`);
+      return total + sign * term * (termDim ? 1 : factor);
+    }
+
+    // "dv:... = 3 1 2 3 mm" -> [1, 2, 3] in mm
+    function parseVector(raw, base, stack) {
+      if (base === 's') return [...raw.matchAll(/"([^"]*)"/g)].map(m => m[1]);
+      const toks = raw.split(/\s+/).filter(Boolean);
+      const n = parseInt(toks[0], 10);
+      if (!(n >= 0)) throw new Error(`Vector '${raw}' must start with its length`);
+      const vals = toks.slice(1, 1 + n);
+      if (vals.length < n) throw new Error(`Expected ${n} values in '${raw}'`);
+      const unitTok = toks[1 + n];
+      const factor = base === 'd' && unitTok ? unitFactor(unitTok) : 1;
+      return vals.map(t => {
+        if (base === 'b') return /^"?(true|t|1)/i.test(t);
+        if (NUM_RE.test(t)) return parseFloat(t) * factor;
+        if (REF_RE.test(t)) return resolveRef(t, stack).value;
+        throw new Error(`Cannot parse '${t}' in '${raw}'`);
+      });
+    }
 
     function parseTopasGeometry(text){
       const lines = text.split(/\r?\n/);
-      const geometry = {}; 
-      const warnings = []; 
+      const geometry = {};
+      const sources = {};
+      const scorers = {};
+      const warnings = [];
       const errors = [];
       nameToLine = {};
+      userColors = {};
+      paramStore = new Map();
+      resolveCache = new Map();
 
       for (let i=0;i<lines.length;i++){
-        const line = lines[i].trim();
-        if (!line || line.startsWith('#') || line.startsWith('//')) continue;
-        
-        const m = line.match(/([sdbSDB]):Ge\/([^\/]+)\/([^=]+)\s*=\s*(.+)/);
-        if (!m) continue;
-        
-        const [, type, component, propertyRaw, valueRaw] = m;
-        if (!geometry[component]) geometry[component] = {};
-        nameToLine[component] = i+1;
-
-        const prop = normalizeProp(propertyRaw);
-        let val;
-        
-        try{
-          if (type.toLowerCase()==='s'){
-            val = valueRaw.replace(/["']/g,'');
-            if (prop==='Type') val = normalizeType(val);
-          } else if (type.toLowerCase()==='d'){
-            val = parseWithUnits(valueRaw);
-          } else if (type.toLowerCase()==='b'){
-            val = /true/i.test(valueRaw);
-          }
-        }catch(e){ 
-          errors.push(`Line ${i+1}: ${e.message}`); 
+        const line = stripComment(lines[i]).trim();
+        if (!line || line.startsWith('//')) continue;
+        const m = line.match(/^([A-Za-z]{1,3}):\s*([A-Za-z]{2}\/[^=\s]+)\s*=\s*(.*)$/);
+        if (!m) {
+          if (!/^includeFile/i.test(line)) warnings.push(`Line ${i+1}: couldn't read '${line}'`);
+          continue;
         }
-        
-        geometry[component][prop] = val;
+        paramStore.set(m[2].toLowerCase(), { kind: m[1].toLowerCase(), raw: m[3], line: i+1, name: m[2] });
       }
 
+      for (const entry of paramStore.values()) {
+        const parts = entry.name.split('/');
+        if (parts.length < 3) continue;
+        const cat = parts[0].toLowerCase();
+        if (!['ge', 'so', 'sc', 'gr'].includes(cat)) continue;
+        const comp = parts.slice(1, -1).join('/');
+        const prop = normalizeProp(parts[parts.length - 1]);
+        let val;
+        try {
+          val = resolveRef(entry.name).value;
+        } catch (e) {
+          errors.push(`Line ${entry.line}: ${e.message}`);
+          continue;
+        }
+        if (cat === 'ge') {
+          if (!geometry[comp]) geometry[comp] = {};
+          if (nameToLine[comp] === undefined) nameToLine[comp] = entry.line;
+          geometry[comp][prop] = prop === 'Type' ? normalizeType(String(val)) : val;
+        } else if (cat === 'so') {
+          if (!sources[comp]) sources[comp] = {};
+          sources[comp][prop] = val;
+        } else if (cat === 'sc') {
+          if (!scorers[comp]) scorers[comp] = {};
+          scorers[comp][prop] = val;
+        } else if (comp.toLowerCase() === 'color' && Array.isArray(val) && val.length === 3) {
+          userColors[parts[2].toLowerCase()] = (val[0] << 16) | (val[1] << 8) | val[2];
+        }
+      }
+
+      applyTopasDefaults(geometry, sources);
       validateGeometry(geometry, warnings, errors);
-      return { geometry, warnings, errors };
+      return { geometry, sources, scorers, warnings, errors };
     }
+
+    // Defaults TOPAS supplies without being asked
+    function applyTopasDefaults(geometry, sources) {
+      if (!geometry.World) geometry.World = {};
+      if (!geometry.World.Type) geometry.World.Type = 'TsBox';
+      const beamPosUsed = geometry.BeamPosition ||
+        Object.values(sources).some(s => (s.Component || 'BeamPosition') === 'BeamPosition');
+      if (beamPosUsed) {
+        const bp = geometry.BeamPosition || (geometry.BeamPosition = {});
+        if (!bp.Type) bp.Type = 'Group';
+        if (!bp.Parent) bp.Parent = 'World';
+        if (bp.TransZ === undefined) bp.TransZ = (geometry.World && geometry.World.HLZ) || 0;
+        if (bp.RotX === undefined) bp.RotX = Math.PI;
+      }
+    }
+
+    const KNOWN_PROPS = ['Type', 'Parent', 'Material', 'Color', 'DrawingStyle', 'Invisible',
+      'TransX', 'TransY', 'TransZ', 'RotX', 'RotY', 'RotZ',
+      'HLX', 'HLY', 'HLZ', 'HL', 'RMin', 'RMax', 'SPhi', 'DPhi', 'STheta', 'DTheta',
+      'RMin1', 'RMax1', 'RMin2', 'RMax2', 'LowNorm', 'HighNorm', 'Alpha', 'Theta', 'Phi',
+      'HLX1', 'HLX2', 'HLX3', 'HLX4', 'HLY1', 'HLY2', 'LZ', 'LY', 'LX', 'LTX', 'Alp1', 'Alp2',
+      'R', 'RTor', 'PhiStart', 'PhiTotal', 'RInner', 'ROuter', 'Z', 'NSides',
+      'ZBottom', 'ZTop', 'ZMax', 'R1', 'R2', 'IR', 'OR', 'IS', 'OS',
+      'Anchor', 'P2', 'P3', 'P4', 'Polygons', 'Off1', 'Off2', 'Scale1', 'Scale2',
+      'Twist', 'Vertices', 'EndInnerRad', 'EndOuterRad',
+      'InputFile', 'FileFormat', 'Units', 'Component', 'Quantity'];
+    const PROP_MAP = Object.fromEntries(KNOWN_PROPS.map(p => [p.toLowerCase(), p]));
 
     function normalizeProp(p){
       const key = p.trim();
-      const map = { 
-        type:'Type', parent:'Parent', material:'Material', color:'Color',
-        rmax:'RMax', rmin:'RMin', hlx:'HLX', hly:'HLY', hlz:'HLZ', hl:'HL', 
-        rx:'Rx', ry:'Ry', rz:'Rz', rtor:'Rtor',
-        rmax1:'RMax1', rmin1:'RMin1', rmax2:'RMax2', rmin2:'RMin2',
-        transx:'TransX', transy:'TransY', transz:'TransZ', 
-        rotx:'RotX', roty:'RotY', rotz:'RotZ' 
-      };
-      const l = key.toLowerCase();
-      return map[l] || key.replace(/\s+/g,'');
+      return PROP_MAP[key.toLowerCase()] || key.replace(/\s+/g,'');
     }
 
     function normalizeType(t){
       const l = t.toLowerCase();
-      const map = { 
-        tsbox:'TsBox', tssphere:'TsSphere', tscylinder:'TsCylinder', 
-        tstube:'TsTube', tstubs:'TsTubs', tscone:'TsCone', tstorus:'TsTorus',
-        tsellipsoid:'TsEllipsoid', tsellipticaltube:'TsEllipticalTube',
-        tstrap:'TsTrap', tstrd:'TsTrd', tspara:'TsPara', tswedge:'TsWedge',
-      };
-      return map[l] || t;
+      const known = [...Object.keys(SHAPES), 'Group', 'TsCAD'];
+      return known.find(k => k.toLowerCase() === l) || t;
     }
 
-    function parseWithUnits(expr){
-      const m = String(expr).trim().match(/([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\s*(\w+)?/);
-      if(!m) throw new Error(`Cannot parse value '${expr}'`);
-      
-      let num = parseFloat(m[1]);
-      const unit = (m[2]||'mm').toLowerCase();
-      
-      if (unit==='cm') num *= 10; 
-      else if (unit==='m') num *= 1000; 
-      else if (unit==='mm') num *= 1; 
-      else if (unit==='deg' || unit==='degree' || unit==='degrees') num = THREE.MathUtils.degToRad(num);
-      
-      return num;
+    // ---------------------------------------------------------------------------------
+    // Shape construction. All builders return a BufferGeometry in the component's own
+    // TOPAS frame (mm), matching Geant4's solid definitions.
+    // ---------------------------------------------------------------------------------
+    const TWO_PI = Math.PI * 2;
+    // LatheGeometry revolves about +Y starting at +Z; this cyclic permutation (proper rotation)
+    // makes it revolve about TOPAS +Z starting at +X, so phi matches Geant4's SPhi/PhiStart.
+    const LATHE_TO_TOPAS = new THREE.Matrix4().set(0,0,1,0, 1,0,0,0, 0,1,0,0, 0,0,0,1);
+
+    function num(p, key, def) { return typeof p[key] === 'number' && !isNaN(p[key]) ? p[key] : def; }
+    function vec(p, key, def) { return Array.isArray(p[key]) ? p[key] : def; }
+
+    function trisGeometry(flat) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(flat, 3));
+      g.computeVertexNormals();
+      return g;
     }
+
+    function mergeGeometries(pieces) {
+      const parts = pieces.filter(Boolean).map(g => {
+        g = g.index ? g.toNonIndexed() : g;
+        if (!g.getAttribute('normal')) g.computeVertexNormals();
+        return g;
+      });
+      let n = 0;
+      parts.forEach(g => n += g.getAttribute('position').count * 3);
+      const pos = new Float32Array(n), nor = new Float32Array(n);
+      let o = 0;
+      for (const g of parts) {
+        pos.set(g.getAttribute('position').array, o);
+        nor.set(g.getAttribute('normal').array, o);
+        o += g.getAttribute('position').count * 3;
+      }
+      const out = new THREE.BufferGeometry();
+      out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+      return out;
+    }
+
+    function flatNormals(g) {
+      g = g.index ? g.toNonIndexed() : g;
+      g.computeVertexNormals();
+      return g;
+    }
+
+    // closed polygon in (r, z) as sharp-edged 2-point chains
+    function polyLoop(pts) {
+      return pts.map((pt, i) => [pt, pts[(i + 1) % pts.length]]);
+    }
+
+    function loopPoints(loop) {
+      const pts = [];
+      for (const chain of loop) for (const pt of chain) {
+        const last = pts[pts.length - 1];
+        if (!last || Math.hypot(last[0] - pt[0], last[1] - pt[1]) > 1e-9) pts.push(pt);
+      }
+      if (pts.length > 1 && Math.hypot(pts[0][0] - pts[pts.length-1][0], pts[0][1] - pts[pts.length-1][1]) <= 1e-9) pts.pop();
+      return pts;
+    }
+
+    // flat cap of a partial revolution: the (r, z) profile placed in the half-plane at angle phi
+    function profileCap(loops, phi) {
+      const rings = loops.map(loopPoints).filter(r => r.length >= 3);
+      if (!rings.length) return null;
+      const contour = rings[0].map(([r, z]) => new THREE.Vector2(r, z));
+      const holes = rings.slice(1).map(r => r.map(([rr, z]) => new THREE.Vector2(rr, z)));
+      const faces = THREE.ShapeUtils.triangulateShape(contour, holes);
+      const all = contour.concat(...holes);
+      const c = Math.cos(phi), s = Math.sin(phi), tris = [];
+      for (const f of faces) for (const idx of f) tris.push(all[idx].x * c, all[idx].x * s, all[idx].y);
+      return trisGeometry(tris);
+    }
+
+    // Revolve (r, z) profile loops about Z from sPhi over dPhi. loops[0] is the outline,
+    // further loops are holes (used for the end caps of partial revolutions).
+    function revolve(loops, sPhi = 0, dPhi = TWO_PI, segments = null) {
+      const full = dPhi >= TWO_PI - 1e-9;
+      if (full) { sPhi = 0; dPhi = TWO_PI; }
+      const n = segments || Math.max(6, Math.ceil(64 * dPhi / TWO_PI));
+      const pieces = [];
+      for (const loop of loops) for (const chain of loop) {
+        if (chain.length < 2 || chain.every(([r]) => r <= 1e-9)) continue;
+        const g = new THREE.LatheGeometry(chain.map(([r, z]) => new THREE.Vector2(Math.max(r, 0), z)), n, sPhi, dPhi);
+        g.applyMatrix4(LATHE_TO_TOPAS);
+        pieces.push(g);
+      }
+      if (!full) pieces.push(profileCap(loops, sPhi), profileCap(loops, sPhi + dPhi));
+      return mergeGeometries(pieces);
+    }
+
+    function arcPts(R, a0, a1, cz = 0) {
+      const n = Math.max(8, Math.ceil(48 * Math.abs(a1 - a0) / Math.PI));
+      const pts = [];
+      for (let i = 0; i <= n; i++) {
+        const a = a0 + (a1 - a0) * i / n;
+        pts.push([R * Math.sin(a), cz + R * Math.cos(a)]);  // theta measured from +Z
+      }
+      return pts;
+    }
+
+    function curvePts(fn, z0, z1, n = 32) {
+      const pts = [];
+      for (let i = 0; i <= n; i++) { const z = z0 + (z1 - z0) * i / n; pts.push([fn(z), z]); }
+      return pts;
+    }
+
+    function cylinderLoop(rMin, rMax, hl) {
+      return polyLoop([[rMin, -hl], [rMax, -hl], [rMax, hl], [rMin, hl]]);
+    }
+
+    function sphereLoop(rMin, rMax, t0, t1) {
+      const outer = arcPts(rMax, t0, t1);
+      const inner = rMin > 0 ? arcPts(rMin, t1, t0) : [[0, 0]];
+      return [outer, [outer[outer.length - 1], inner[0]], inner, [inner[inner.length - 1], outer[0]]];
+    }
+
+    // Side quads between consecutive closed sections (arrays of [x, y, z]) plus flat end caps
+    function loft(sections) {
+      const tris = [];
+      const push = (...pts) => pts.forEach(q => tris.push(q[0], q[1], q[2]));
+      for (let s = 0; s < sections.length - 1; s++) {
+        const a = sections[s], b = sections[s + 1], n = a.length;
+        for (let i = 0; i < n; i++) {
+          const j = (i + 1) % n;
+          push(a[i], a[j], b[j], a[i], b[j], b[i]);
+        }
+      }
+      for (const sec of [sections[0], sections[sections.length - 1]]) {
+        const contour = sec.map(q => new THREE.Vector2(q[0], q[1]));
+        const faces = THREE.ShapeUtils.triangulateShape(contour, []);
+        for (const f of faces) push(sec[f[0]], sec[f[1]], sec[f[2]]);
+      }
+      return trisGeometry(tris);
+    }
+
+    const lerp3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
+    function linearLoft(bottom, top, steps = 1) {
+      const sections = [];
+      for (let k = 0; k <= steps; k++) sections.push(bottom.map((b, i) => lerp3(b, top[i], k / steps)));
+      return loft(sections);
+    }
+
+    // Geant4 G4Trap corners: [bottom(-dz), top(+dz)], each ordered (-x,-y) (+x,-y) (+x,+y) (-x,+y)
+    function trapCorners(dz, theta, phi, dy1, dx1, dx2, alp1, dy2, dx3, dx4, alp2) {
+      const tc = Math.tan(theta) * Math.cos(phi), ts = Math.tan(theta) * Math.sin(phi);
+      const ta1 = Math.tan(alp1), ta2 = Math.tan(alp2);
+      const face = (z, dy, dxLow, dxHigh, ta) => [
+        [z * tc - dy * ta - dxLow,  z * ts - dy, z],
+        [z * tc - dy * ta + dxLow,  z * ts - dy, z],
+        [z * tc + dy * ta + dxHigh, z * ts + dy, z],
+        [z * tc + dy * ta - dxHigh, z * ts + dy, z]];
+      return { bottom: face(-dz, dy1, dx1, dx2, ta1), top: face(dz, dy2, dx3, dx4, ta2), tc, ts };
+    }
+
+    // Twisted solids: the section rotates linearly with z (-twist/2 at -dz to +twist/2 at +dz)
+    // about the solid's axis, which leans by theta/phi
+    function twistedLoft({ bottom, top, tc, ts }, twist, steps = 24) {
+      const sections = [];
+      for (let k = 0; k <= steps; k++) {
+        const t = k / steps, ang = (t - 0.5) * twist, c = Math.cos(ang), s = Math.sin(ang);
+        sections.push(bottom.map((b, i) => {
+          const q = lerp3(b, top[i], t), cx = q[2] * tc, cy = q[2] * ts;
+          const dx = q[0] - cx, dy = q[1] - cy;
+          return [cx + dx * c - dy * s, cy + dx * s + dy * c, q[2]];
+        }));
+      }
+      return loft(sections);
+    }
+
+    const D = Math.PI / 180;
+    const SHAPES = {
+      TsBox: {
+        req: ['HLX', 'HLY', 'HLZ'],
+        tpl: ['d:HLX = 30 mm', 'd:HLY = 40 mm', 'd:HLZ = 60 mm'],
+        build: p => new THREE.BoxGeometry(2 * p.HLX, 2 * p.HLY, 2 * p.HLZ)
+      },
+      TsCylinder: {
+        req: ['RMax', 'HL'],
+        tpl: ['d:RMin = 0 mm', 'd:RMax = 15 mm', 'd:HL = 20 mm', 'd:SPhi = 0 deg', 'd:DPhi = 360 deg'],
+        build: p => revolve([cylinderLoop(num(p, 'RMin', 0), p.RMax, p.HL)], num(p, 'SPhi', 0), num(p, 'DPhi', TWO_PI))
+      },
+      TsSphere: {
+        req: ['RMax'],
+        tpl: ['d:RMin = 0 mm', 'd:RMax = 50 mm', 'd:SPhi = 0 deg', 'd:DPhi = 360 deg', 'd:STheta = 0 deg', 'd:DTheta = 180 deg'],
+        build: p => {
+          const t0 = num(p, 'STheta', 0), t1 = Math.min(Math.PI, t0 + num(p, 'DTheta', Math.PI));
+          return revolve([sphereLoop(num(p, 'RMin', 0), p.RMax, t0, t1)], num(p, 'SPhi', 0), num(p, 'DPhi', TWO_PI));
+        }
+      },
+      G4Orb: {
+        req: ['R'],
+        tpl: ['d:R = 50 mm'],
+        build: p => new THREE.SphereGeometry(p.R, 48, 32)
+      },
+      G4Cons: {
+        req: ['RMax1', 'RMax2', 'HL'],
+        tpl: ['d:RMin1 = 5 mm', 'd:RMax1 = 10 mm', 'd:RMin2 = 20 mm', 'd:RMax2 = 25 mm', 'd:HL = 40 mm', 'd:SPhi = 0 deg', 'd:DPhi = 360 deg'],
+        build: p => revolve([polyLoop([[num(p, 'RMin1', 0), -p.HL], [p.RMax1, -p.HL], [p.RMax2, p.HL], [num(p, 'RMin2', 0), p.HL]])],
+                            num(p, 'SPhi', 0), num(p, 'DPhi', TWO_PI))
+      },
+      G4CutTubs: {
+        req: ['RMax', 'HL'],
+        tpl: ['d:RMin = 12 mm', 'd:RMax = 20 mm', 'd:HL = 30 mm', 'd:SPhi = 0 deg', 'd:DPhi = 360 deg',
+              'uv:LowNorm = 3 0. -0.7 -0.71', 'uv:HighNorm = 3 0.7 0. 0.71'],
+        build: p => {
+          const g = revolve([cylinderLoop(num(p, 'RMin', 0), p.RMax, p.HL)], num(p, 'SPhi', 0), num(p, 'DPhi', TWO_PI));
+          const lo = vec(p, 'LowNorm', [0, 0, -1]), hi = vec(p, 'HighNorm', [0, 0, 1]);
+          const pos = g.getAttribute('position');
+          for (let i = 0; i < pos.count; i++) {
+            const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+            const n = z > 0 ? hi : lo, z0 = z > 0 ? p.HL : -p.HL;
+            if (Math.abs(n[2]) > 1e-9) pos.setZ(i, z0 - (n[0] * x + n[1] * y) / n[2]);  // point on the cut plane
+          }
+          return flatNormals(g);
+        }
+      },
+      G4Para: {
+        req: ['HLX', 'HLY', 'HLZ'],
+        tpl: ['d:HLX = 30 mm', 'd:HLY = 40 mm', 'd:HLZ = 60 mm', 'd:Alpha = 17 deg', 'd:Theta = 0 deg', 'd:Phi = 0 deg'],
+        build: p => {
+          const a = num(p, 'Alpha', 0), c = trapCorners(p.HLZ, num(p, 'Theta', 0), num(p, 'Phi', 0), p.HLY, p.HLX, p.HLX, a, p.HLY, p.HLX, p.HLX, a);
+          return linearLoft(c.bottom, c.top);
+        }
+      },
+      G4Trd: {
+        req: ['HLX1', 'HLX2', 'HLY1', 'HLY2', 'HLZ'],
+        tpl: ['d:HLX1 = 30 mm', 'd:HLX2 = 10 mm', 'd:HLY1 = 40 mm', 'd:HLY2 = 15 mm', 'd:HLZ = 60 mm'],
+        build: p => {
+          const c = trapCorners(p.HLZ, 0, 0, p.HLY1, p.HLX1, p.HLX1, 0, p.HLY2, p.HLX2, p.HLX2, 0);
+          return linearLoft(c.bottom, c.top);
+        }
+      },
+      G4RTrap: {  // right angular wedge: full lengths, LTX = x length at +y
+        req: ['LZ', 'LY', 'LX', 'LTX'],
+        tpl: ['d:LZ = 120 mm', 'd:LY = 80 mm', 'd:LX = 60 mm', 'd:LTX = 30 mm'],
+        build: p => {
+          const alpha = Math.atan(0.5 * (p.LTX - p.LX) / p.LY);
+          const c = trapCorners(p.LZ / 2, 0, 0, p.LY / 2, p.LX / 2, p.LTX / 2, alpha, p.LY / 2, p.LX / 2, p.LTX / 2, alpha);
+          return linearLoft(c.bottom, c.top);
+        }
+      },
+      G4GTrap: {
+        req: ['HLZ', 'HLY1', 'HLX1', 'HLX2', 'HLY2', 'HLX3', 'HLX4'],
+        tpl: ['d:HLZ = 60 mm', 'd:Theta = 20 deg', 'd:Phi = 5 deg', 'd:HLY1 = 40 mm', 'd:HLX1 = 30 mm', 'd:HLX2 = 40 mm',
+              'd:Alp1 = 10 deg', 'd:HLY2 = 16 mm', 'd:HLX3 = 10 mm', 'd:HLX4 = 14 mm', 'd:Alp2 = 10 deg'],
+        build: p => {
+          const c = trapCorners(p.HLZ, num(p, 'Theta', 0), num(p, 'Phi', 0), p.HLY1, p.HLX1, p.HLX2, num(p, 'Alp1', 0),
+                                p.HLY2, p.HLX3, p.HLX4, num(p, 'Alp2', 0));
+          return linearLoft(c.bottom, c.top);
+        }
+      },
+      G4Torus: {
+        req: ['RMax', 'RTor'],
+        tpl: ['d:RMin = 40 mm', 'd:RMax = 60 mm', 'd:RTor = 200 mm', 'd:SPhi = 0 deg', 'd:DPhi = 360 deg'],
+        build: p => {
+          const circle = r => [Array.from({ length: 49 }, (_, i) => {
+            const a = TWO_PI * i / 48;
+            return [p.RTor + r * Math.cos(a), r * Math.sin(a)];
+          })];
+          const loops = [circle(p.RMax)];
+          if (num(p, 'RMin', 0) > 0) loops.push(circle(p.RMin));
+          return revolve(loops, num(p, 'SPhi', 0), num(p, 'DPhi', TWO_PI));
+        }
+      },
+      G4HPolycone: {  // z planes with inner and outer radii
+        req: ['RInner', 'ROuter', 'Z'],
+        tpl: ['d:PhiStart = 0 deg', 'd:PhiTotal = 360 deg', 'dv:RInner = 9 0 1. 1. 1. 2. 2. 3. .5 .2 mm',
+              'dv:ROuter = 9 0 10 10 5 5 10 10 2 2 mm', 'dv:Z = 9 5 7 9 11 25 27 29 31 35 mm'],
+        build: p => {
+          const n = Math.min(p.RInner.length, p.ROuter.length, p.Z.length);
+          const outer = p.Z.slice(0, n).map((z, i) => [p.ROuter[i], z]);
+          const inner = p.Z.slice(0, n).map((z, i) => [p.RInner[i], z]).reverse();
+          return revolve([polyLoop(outer.concat(inner))], num(p, 'PhiStart', 0), num(p, 'PhiTotal', TWO_PI));
+        }
+      },
+      G4SPolycone: {  // (R, Z) corners of the outline
+        req: ['R', 'Z'],
+        tpl: ['d:PhiStart = 0 deg', 'd:PhiTotal = 360 deg', 'dv:R = 10 0 10 10 5 5 10 10 2 2 0 mm',
+              'dv:Z = 10 5 7 9 11 25 27 29 31 35 35 mm'],
+        build: p => revolve([polyLoop(p.Z.slice(0, p.R.length).map((z, i) => [p.R[i], z]))],
+                            num(p, 'PhiStart', 0), num(p, 'PhiTotal', TWO_PI))
+      },
+      G4GenericPolycone: {
+        req: ['R', 'Z'],
+        tpl: ['d:PhiStart = 0 deg', 'd:PhiTotal = 360 deg', 'dv:R = 10 0 10 10 5 5 10 10 2 2 0 mm',
+              'dv:Z = 10 5 7 9 11 25 27 29 31 35 35 mm'],
+        build: p => SHAPES.G4SPolycone.build(p)
+      },
+      G4HPolyhedra: {  // z planes; Geant4 radii are distances to the side faces, not to the corners
+        req: ['NSides', 'Z', 'RInner', 'ROuter'],
+        tpl: ['d:PhiStart = 0 deg', 'd:PhiTotal = 360 deg', 'i:NSides = 6', 'dv:Z = 7 0 5 8 13 30 32 35 mm',
+              'dv:RInner = 7 0 2 2 3 1 1 2 mm', 'dv:ROuter = 7 0 15 15 4 4 10 10 mm'],
+        build: p => {
+          const N = Math.max(1, Math.round(p.NSides)), dPhi = num(p, 'PhiTotal', TWO_PI);
+          const k = 1 / Math.cos(dPhi / (2 * N));
+          const n = Math.min(p.RInner.length, p.ROuter.length, p.Z.length);
+          const outer = p.Z.slice(0, n).map((z, i) => [p.ROuter[i] * k, z]);
+          const inner = p.Z.slice(0, n).map((z, i) => [p.RInner[i] * k, z]).reverse();
+          return flatNormals(revolve([polyLoop(outer.concat(inner))], num(p, 'PhiStart', 0), dPhi, N));
+        }
+      },
+      G4SPolyhedra: {  // (R, Z) corners
+        req: ['NSides', 'R', 'Z'],
+        tpl: ['d:PhiStart = 0 deg', 'd:PhiTotal = 360 deg', 'i:NSides = 6', 'dv:R = 5 0 4 12 8 0 mm', 'dv:Z = 5 0 0 8 16 16 mm'],
+        build: p => flatNormals(revolve([polyLoop(p.Z.slice(0, p.R.length).map((z, i) => [p.R[i], z]))],
+                                        num(p, 'PhiStart', 0), num(p, 'PhiTotal', TWO_PI), Math.max(1, Math.round(p.NSides))))
+      },
+      G4EllipticalTube: {
+        req: ['HLX', 'HLY', 'HLZ'],
+        tpl: ['d:HLX = 5 mm', 'd:HLY = 10 mm', 'd:HLZ = 20 mm'],
+        build: p => revolve([cylinderLoop(0, 1, p.HLZ)]).scale(p.HLX, p.HLY, 1)
+      },
+      G4Ellipsoid: {  // semi-axes HLX/HLY/HLZ, optional flat cuts at ZBottom/ZTop
+        req: ['HLX', 'HLY', 'HLZ'],
+        tpl: ['d:HLX = 10 mm', 'd:HLY = 20 mm', 'd:HLZ = 50 mm', 'd:ZBottom = -10 mm', 'd:ZTop = 40 mm'],
+        build: p => {
+          const c = p.HLZ;
+          const zt = num(p, 'ZTop', 0) !== 0 ? Math.min(p.ZTop, c) : c;
+          const zb = num(p, 'ZBottom', 0) !== 0 ? Math.max(p.ZBottom, -c) : -c;
+          const arc = arcPts(c, Math.acos(zt / c), Math.acos(zb / c));
+          const loop = [[[0, zt], arc[0]], arc, [arc[arc.length - 1], [0, zb]]];
+          return revolve([loop]).scale(p.HLX / c, p.HLY / c, 1);
+        }
+      },
+      G4EllipticalCone: {  // (x/HLX)^2 + (y/HLY)^2 = (ZMax - z)^2, cut at |z| <= ZTop; HLX/HLY are slopes
+        req: ['HLX', 'HLY', 'ZMax', 'ZTop'],
+        tpl: ['d:HLX = .4 mm', 'd:HLY = .8 mm', 'd:ZMax = 50 mm', 'd:ZTop = 25 mm'],
+        build: p => {
+          const zt = Math.min(p.ZTop, p.ZMax);
+          return revolve([polyLoop([[0, -zt], [p.ZMax + zt, -zt], [p.ZMax - zt, zt], [0, zt]])]).scale(p.HLX, p.HLY, 1);
+        }
+      },
+      G4Paraboloid: {  // radius R1 at -HLZ, R2 at +HLZ
+        req: ['HLZ', 'R1', 'R2'],
+        tpl: ['d:HLZ = 20 mm', 'd:R1 = 20 mm', 'd:R2 = 35 mm'],
+        build: p => {
+          const dz = p.HLZ, k1 = (p.R2 * p.R2 - p.R1 * p.R1) / (2 * dz), k2 = (p.R2 * p.R2 + p.R1 * p.R1) / 2;
+          const curve = curvePts(z => Math.sqrt(Math.max(0, k1 * z + k2)), -dz, dz);
+          return revolve([[[[0, -dz], curve[0]], curve, [curve[curve.length - 1], [0, dz]]]]);
+        }
+      },
+      G4Hype: {  // r(z)^2 = R^2 + (tan(stereo) z)^2
+        req: ['OR', 'HLZ'],
+        tpl: ['d:IR = 20 mm', 'd:OR = 30 mm', 'd:IS = 0.7 rad', 'd:OS = 0.7 rad', 'd:HLZ = 50 mm'],
+        build: p => {
+          const dz = p.HLZ, ir = num(p, 'IR', 0), is = Math.tan(num(p, 'IS', 0)), os = Math.tan(num(p, 'OS', 0));
+          const outer = curvePts(z => Math.hypot(p.OR, os * z), -dz, dz);
+          const inner = curvePts(z => Math.hypot(ir, is * z), dz, -dz);
+          return revolve([[outer, [outer[outer.length - 1], inner[0]], inner, [inner[inner.length - 1], outer[0]]]]);
+        }
+      },
+      G4Tet: {
+        req: ['Anchor', 'P2', 'P3', 'P4'],
+        tpl: ['dv:Anchor = 3 0 0 17.3 mm', 'dv:P2 = 3 0 16.3 -5.8 mm', 'dv:P3 = 3 -14.1 -8.2 -5.8 mm', 'dv:P4 = 3 14.1 -8.2 -5.8 mm'],
+        build: p => {
+          const [a, b, c, d] = [p.Anchor, p.P2, p.P3, p.P4];
+          return trisGeometry([...a, ...b, ...c, ...a, ...b, ...d, ...a, ...c, ...d, ...b, ...c, ...d]);
+        }
+      },
+      G4ExtrudedSolid: {  // polygon (x y pairs) swept from -HLZ (Off1, Scale1) to +HLZ (Off2, Scale2)
+        req: ['Polygons', 'HLZ'],
+        tpl: ['dv:Polygons = 16 -30 -30 -30 30 30 30 30 -30 15 -30 15 15 -15 15 -15 -30 mm', 'd:HLZ = 20 mm',
+              'dv:Off1 = 2 10. 10. mm', 'u:Scale1 = 1.', 'dv:Off2 = 2 -10. -10. mm', 'u:Scale2 = 0.6'],
+        build: p => {
+          const poly = [];
+          for (let i = 0; i + 1 < p.Polygons.length; i += 2) poly.push([p.Polygons[i], p.Polygons[i + 1]]);
+          const sec = (off, sc, z) => poly.map(([x, y]) => [x * sc + off[0], y * sc + off[1], z]);
+          return linearLoft(sec(vec(p, 'Off1', [0, 0]), num(p, 'Scale1', 1), -p.HLZ),
+                            sec(vec(p, 'Off2', [0, 0]), num(p, 'Scale2', 1), p.HLZ));
+        }
+      },
+      G4TwistedBox: {
+        req: ['Twist', 'HLX', 'HLY', 'HLZ'],
+        tpl: ['d:Twist = 30 deg', 'd:HLX = 30 mm', 'd:HLY = 40 mm', 'd:HLZ = 60 mm'],
+        build: p => twistedLoft(trapCorners(p.HLZ, 0, 0, p.HLY, p.HLX, p.HLX, 0, p.HLY, p.HLX, p.HLX, 0), p.Twist)
+      },
+      G4RTwistedTrap: {  // HLX1 at -HLY, HLX2 at +HLY
+        req: ['Twist', 'HLX1', 'HLX2', 'HLY', 'HLZ'],
+        tpl: ['d:Twist = 30 deg', 'd:HLX1 = 30 mm', 'd:HLX2 = 40 mm', 'd:HLY = 40 mm', 'd:HLZ = 60 mm'],
+        build: p => twistedLoft(trapCorners(p.HLZ, 0, 0, p.HLY, p.HLX1, p.HLX2, 0, p.HLY, p.HLX1, p.HLX2, 0), p.Twist)
+      },
+      G4GTwistedTrap: {
+        req: ['Twist', 'HLZ', 'HLY1', 'HLX1', 'HLX2', 'HLY2', 'HLX3', 'HLX4'],
+        tpl: ['d:Twist = 30 deg', 'd:HLZ = 60 mm', 'd:Theta = 20 deg', 'd:Phi = 5 deg', 'd:HLY1 = 40 mm', 'd:HLX1 = 30 mm',
+              'd:HLX2 = 40 mm', 'd:HLY2 = 16 mm', 'd:HLX3 = 10 mm', 'd:HLX4 = 14 mm', 'd:Alpha = 10 deg'],
+        build: p => {
+          const a = num(p, 'Alpha', 0);
+          return twistedLoft(trapCorners(p.HLZ, num(p, 'Theta', 0), num(p, 'Phi', 0), p.HLY1, p.HLX1, p.HLX2, a,
+                                         p.HLY2, p.HLX3, p.HLX4, a), p.Twist);
+        }
+      },
+      G4TwistedTrd: {
+        req: ['HLX1', 'HLX2', 'HLY1', 'HLY2', 'HLZ', 'Twist'],
+        tpl: ['d:HLX1 = 30 mm', 'd:HLX2 = 10 mm', 'd:HLY1 = 40 mm', 'd:HLY2 = 15 mm', 'd:HLZ = 60 mm', 'd:Twist = 30 deg'],
+        build: p => twistedLoft(trapCorners(p.HLZ, 0, 0, p.HLY1, p.HLX1, p.HLX1, 0, p.HLY2, p.HLX2, p.HLX2, 0), p.Twist)
+      },
+      G4GenericTrap: {  // 8 (x, y) vertices: 4 at -HLZ then 4 at +HLZ; sides may be twisted
+        req: ['HLZ', 'Vertices'],
+        tpl: ['d:HLZ = 25 mm', 'dv:Vertices = 16 -30 -30 -30 30 30 30 30 -30 -5 -20 -20 20 20 20 20 -20 mm'],
+        build: p => {
+          const v = p.Vertices, bottom = [], top = [];
+          for (let i = 0; i < 4; i++) {
+            bottom.push([v[2 * i], v[2 * i + 1], -p.HLZ]);
+            top.push([v[8 + 2 * i], v[8 + 2 * i + 1], p.HLZ]);
+          }
+          return linearLoft(bottom, top, 12);  // straight lines between matching vertices
+        }
+      },
+      G4TwistedTubs: {  // tube segment of opening Phi; ends rotated by -/+Twist/2 and joined by straight lines
+        req: ['Twist', 'EndInnerRad', 'EndOuterRad', 'HLZ', 'Phi'],
+        tpl: ['d:Twist = 60 deg', 'd:EndInnerRad = 10 mm', 'd:EndOuterRad = 15 mm', 'd:HLZ = 20 mm', 'd:Phi = 90 deg'],
+        build: p => {
+          const n = Math.max(6, Math.ceil(32 * p.Phi / Math.PI));
+          const section = (off, z) => {
+            const pts = [];
+            for (let i = 0; i <= n; i++) {
+              const a = off - p.Phi / 2 + p.Phi * i / n;
+              pts.push([p.EndOuterRad * Math.cos(a), p.EndOuterRad * Math.sin(a), z]);
+            }
+            for (let i = n; i >= 0; i--) {
+              const a = off - p.Phi / 2 + p.Phi * i / n;
+              pts.push([p.EndInnerRad * Math.cos(a), p.EndInnerRad * Math.sin(a), z]);
+            }
+            return pts;
+          };
+          return linearLoft(section(-p.Twist / 2, -p.HLZ), section(p.Twist / 2, p.HLZ), 24);
+        }
+      },
+    };
+
+    const POSITIVE_PROPS = new Set(['HLX', 'HLY', 'HLZ', 'HL', 'RMax', 'R', 'RTor', 'LX', 'LY', 'LZ', 'NSides',
+      'HLX1', 'HLX2', 'HLX3', 'HLX4', 'HLY1', 'HLY2', 'EndOuterRad', 'Phi', 'ZMax']);
+    const VECTOR_LENGTHS = { LowNorm: 3, HighNorm: 3, Anchor: 3, P2: 3, P3: 3, P4: 3, Off1: 2, Off2: 2, Vertices: 16 };
 
     function validateGeometry(geom, warnings, errors){
       for (const [name, p] of Object.entries(geom)){
-        if (!p.Type){ 
-          errors.push(`${name}: Missing Type`); 
-          continue; 
+        if (!p.Type){
+          errors.push(`${name}: Missing Type`);
+          continue;
         }
-        
-        switch (p.Type){
-          case 'TsBox':
-            ['HLX','HLY','HLZ'].forEach(dim=>{
-              if(!p[dim]) errors.push(`${name}: Missing ${dim}`); 
-              else if (p[dim]<=0) errors.push(`${name}: ${dim} must be > 0`); 
-            });
-            break;
-          case 'TsCylinder':
-            if (!p.RMax) errors.push(`${name}: Missing RMax`); 
-            if (!p.HL) errors.push(`${name}: Missing HL`);
-            break;
-          case 'TsSphere':
-            if (!p.RMax) errors.push(`${name}: Missing RMax`);
-            break;
+
+        const shape = SHAPES[p.Type];
+        if (name === 'World' && p.Type === 'TsBox' && ['HLX', 'HLY', 'HLZ'].some(k => p[k] === undefined)) {
+          // TOPAS supplies a default World; without its size there is nothing to draw
+        } else if (shape) {
+          for (const k of shape.req) {
+            if (p[k] === undefined) errors.push(`${name}: Missing ${k}`);
+            else if (POSITIVE_PROPS.has(k) && typeof p[k] === 'number' && !(p[k] > 0)) errors.push(`${name}: ${k} must be > 0`);
+          }
+          for (const [k, len] of Object.entries(VECTOR_LENGTHS)) {
+            if (p[k] !== undefined && (!Array.isArray(p[k]) || p[k].length !== len)) {
+              errors.push(`${name}: ${k} needs ${len} values`);
+            }
+          }
+          if (p.RMin !== undefined && p.RMax !== undefined && p.RMin >= p.RMax) errors.push(`${name}: RMin must be < RMax`);
+          if (p.Type === 'G4ExtrudedSolid' && Array.isArray(p.Polygons) && (p.Polygons.length < 6 || p.Polygons.length % 2)) {
+            errors.push(`${name}: Polygons needs x y pairs for at least 3 points`);
+          }
+        } else if (p.Type === 'TsCAD') {
+          if (!p.InputFile) errors.push(`${name}: Missing InputFile`);
+        } else if (p.Type !== 'Group') {
+          warnings.push(`${name}: Quick View doesn't draw '${p.Type}' (its children are still placed)`);
         }
-        
+
         if (p.Parent && !geom[p.Parent]) {
           errors.push(`${name}: Parent '${p.Parent}' not found`);
         }
       }
     }
-    
+
     function getChildrenOf(name, geom) {
       return Object.keys(geom).filter(key => geom[key].Parent === name);
     }
-    
+
     function isInsideHollowCylinder(childGeom, cylinderGeom, childPos, cylPos) {
-      // Check if child is inside the hollow cavity of a cylinder
       if (cylinderGeom.Type !== 'TsCylinder' || !cylinderGeom.RMin || cylinderGeom.RMin <= 0) {
         return false;
       }
-      
-      // Get relative position of child to cylinder
       const relX = childPos.x - cylPos.x;
       const relY = childPos.y - cylPos.y;
       const relZ = childPos.z - cylPos.z;
-      
-      // Calculate radial distance from cylinder axis (Z-axis)
       const radialDist = Math.sqrt(relX * relX + relY * relY);
-      
-      // Check Z bounds
       const cylHL = cylinderGeom.HL || 0;
-      if (Math.abs(relZ) > cylHL) {
-        return false;
-      }
-      
-      // Check if child is within the inner radius
+      if (Math.abs(relZ) > cylHL) return false;
       let childRadius = 0;
-      if (childGeom.Type === 'TsCylinder') {
-        childRadius = childGeom.RMax || 0;
-      } else if (childGeom.Type === 'TsSphere') {
-        childRadius = childGeom.RMax || 0;
-      } else if (childGeom.Type === 'TsBox') {
-        childRadius = Math.max(childGeom.HLX || 0, childGeom.HLY || 0);
-      }
-      
+      if (childGeom.Type === 'TsCylinder') childRadius = childGeom.RMax || 0;
+      else if (childGeom.Type === 'TsSphere') childRadius = childGeom.RMax || 0;
+      else if (childGeom.Type === 'TsBox') childRadius = Math.max(childGeom.HLX || 0, childGeom.HLY || 0);
       return (radialDist + childRadius) <= cylinderGeom.RMin;
     }
 
     function checkHierarchyOverlaps(geom, meshes, warnings) {
       const allNames = Object.keys(geom);
-      
       for (const parent of allNames) {
         const children = getChildrenOf(parent, geom);
-        
         for (let i = 0; i < children.length; i++) {
           for (let j = i + 1; j < children.length; j++) {
             const child1Name = children[i];
             const child2Name = children[j];
             const child1Geom = geom[child1Name];
             const child2Geom = geom[child2Name];
-            
             if (meshes[child1Name] && meshes[child2Name]) {
               const box1 = new THREE.Box3().setFromObject(meshes[child1Name]);
               const box2 = new THREE.Box3().setFromObject(meshes[child2Name]);
-              
               if (box1.intersectsBox(box2)) {
-                // Check if one is inside the other's hollow cavity
                 const pos1 = { x: child1Geom.TransX || 0, y: child1Geom.TransY || 0, z: child1Geom.TransZ || 0 };
                 const pos2 = { x: child2Geom.TransX || 0, y: child2Geom.TransY || 0, z: child2Geom.TransZ || 0 };
-                
                 const child2InChild1Cavity = isInsideHollowCylinder(child2Geom, child1Geom, pos2, pos1);
                 const child1InChild2Cavity = isInsideHollowCylinder(child1Geom, child2Geom, pos1, pos2);
-                
                 if (!child2InChild1Cavity && !child1InChild2Cavity) {
                   warnings.push(`Overlap: '${child1Name}' and '${child2Name}' (siblings under '${parent}')`);
                 }
@@ -556,221 +1150,930 @@ s:Ge/InnerBox/Material = "Aluminum"
       }
     }
 
-    function createHollowCylinderGeometry(rMin, rMax, height) {
-      const points = [];
-      points.push(new THREE.Vector2(rMin, -height / 2));
-      points.push(new THREE.Vector2(rMax, -height / 2));
-      points.push(new THREE.Vector2(rMax, height / 2));
-      points.push(new THREE.Vector2(rMin, height / 2));
-      
-      const geometry = new THREE.LatheGeometry(points, 48, 0, Math.PI * 2);
-      return geometry;
+    // TOPAS builds the matrix with rotateX(RotX), rotateY(RotY), rotateZ(RotZ) and hands it to
+    // G4PVPlacement, which treats it as the rotation of the frame; the component itself turns by
+    // the inverse, Rx(-RotX)·Ry(-RotY)·Rz(-RotZ). "Active" applies the angles directly instead.
+    function topasQuaternion(p) {
+      const s = rotConvention === 'g4' ? -1 : 1;
+      return new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(s * num(p, 'RotX', 0), s * num(p, 'RotY', 0), s * num(p, 'RotZ', 0), 'XYZ'));
     }
 
-    function createHollowConeGeometry(rMin1, rMax1, rMin2, rMax2, height) {
-      // Create a hollow truncated cone using LatheGeometry
-      // Bottom (z = -height/2): rMin1 (inner), rMax1 (outer)
-      // Top (z = +height/2): rMin2 (inner), rMax2 (outer)
-      const points = [];
-      
-      // Create the profile for lathe - from bottom to top
-      points.push(new THREE.Vector2(rMin1, -height / 2));  // Inner bottom
-      points.push(new THREE.Vector2(rMax1, -height / 2));  // Outer bottom
-      points.push(new THREE.Vector2(rMax2, height / 2));   // Outer top
-      points.push(new THREE.Vector2(rMin2, height / 2));   // Inner top
-      
-      const geometry = new THREE.LatheGeometry(points, 48, 0, Math.PI * 2);
-      return geometry;
+    function localMatrix(p) {
+      return new THREE.Matrix4().compose(
+        new THREE.Vector3(num(p, 'TransX', 0), num(p, 'TransY', 0), num(p, 'TransZ', 0)),
+        topasQuaternion(p),
+        new THREE.Vector3(1, 1, 1));
     }
 
-    function createMesh(name, p){
-      let geom;
-      
-      switch(p.Type){
-        case 'Group':
-          // Group is just a container, create empty geometry
-          geom = new THREE.BufferGeometry();
-          break;
-        case 'TsBox':
-          geom = new THREE.BoxGeometry((p.HLX||10)*2, (p.HLZ||10)*2, (p.HLY||10)*2); 
-          break;
-        case 'TsCylinder':
-          if (p.RMin && p.RMin > 0) {
-            geom = createHollowCylinderGeometry(p.RMin, p.RMax||10, (p.HL||10)*2);
-          } else {
-            geom = new THREE.CylinderGeometry(p.RMax||10, p.RMax||10, (p.HL||10)*2, 48);
-          }
-          break;
-        case 'TsSphere':
-          geom = new THREE.SphereGeometry(p.RMax||10, 48, 32);
-          break;
-        case 'G4Cons':
-          // Truncated cone (conical frustum)
-          const rMin1 = p.RMin1 || 0;
-          const rMax1 = p.RMax1 || 10;
-          const rMin2 = p.RMin2 || 0;
-          const rMax2 = p.RMax2 || 10;
-          const height = (p.HL || 10) * 2;
-          
-          if (rMin1 > 0 || rMin2 > 0) {
-            // Hollow cone - create custom geometry
-            geom = createHollowConeGeometry(rMin1, rMax1, rMin2, rMax2, height);
-          } else {
-            // Solid cone
-            geom = new THREE.CylinderGeometry(rMax2, rMax1, height, 48);
-          }
-          break;
-        default:
-          geom = new THREE.BoxGeometry(10,10,10);
-      }
-      
-      // Determine color: prioritize component Color property, then material color
-      let meshColor;
-      if (p.Color) {
-        meshColor = colorNameToHex(p.Color);
-      } else {
-        const matData = materials[p.Material] || materials['Default'];
-        meshColor = matData.color;
-      }
-      
-      const mat = new THREE.MeshPhongMaterial({ 
-        color: meshColor, 
-        transparent: true, 
-        opacity: currentOpacity,
-        wireframe: wireframeMode,
-        side: THREE.DoubleSide
-      });
-      
-      // Don't create a mesh for Group types - just use the object as a container
+    function createMesh(name, p, errors){
+      const shape = SHAPES[p.Type];
       let mesh;
-      if (p.Type === 'Group') {
-        mesh = new THREE.Object3D();
-      } else {
-        mesh = new THREE.Mesh(geom, mat);
+      let geom = null;
+      if (shape && shape.req.every(k => p[k] !== undefined)) {
+        try {
+          geom = shape.build(p);
+        } catch (e) {
+          errors.push(`${name}: couldn't build ${p.Type} (${e.message})`);
+        }
       }
-      
+
+      if (geom) {
+        let meshColor;
+        if (p.Color) {
+          meshColor = colorNameToHex(p.Color);
+        } else {
+          const matData = materials[p.Material] || materials['Default'];
+          meshColor = matData.color;
+        }
+        const mat = new THREE.MeshPhongMaterial({
+          color: meshColor,
+          transparent: true,
+          opacity: currentOpacity,
+          wireframe: wireframeMode,
+          side: THREE.DoubleSide
+        });
+        if (p.Invisible === true) mat.visible = false;  // children stay visible, as in TOPAS
+        mesh = new THREE.Mesh(geom, mat);
+        mesh.userData.wire = /wire/i.test(p.DrawingStyle || '');
+      } else {
+        mesh = new THREE.Object3D();  // Group, TsCAD (STL placed separately), undrawn types
+      }
+
       mesh.name = name;
-      mesh.position.set(p.TransX||0, p.TransZ||0, p.TransY||0);
-      
-      if (p.RotX!=null) mesh.rotation.x = p.RotX;
-      if (p.RotY!=null) mesh.rotation.z = p.RotY;
-      if (p.RotZ!=null) mesh.rotation.y = p.RotZ;
-      
+      mesh.position.set(num(p, 'TransX', 0), num(p, 'TransY', 0), num(p, 'TransZ', 0));
+      mesh.quaternion.copy(topasQuaternion(p));
       return mesh;
     }
 
-    function buildHierarchy(geom) {
+    function buildHierarchy(geom, errors) {
       const meshes = {};
       const roots = [];
-      
+
       Object.entries(geom).forEach(([name, p]) => {
-        meshes[name] = createMesh(name, p);
+        meshes[name] = createMesh(name, p, errors);
       });
-      
+
       Object.entries(geom).forEach(([name, p]) => {
-        if (p.Parent && meshes[p.Parent]) {
+        let cycle = false;
+        for (let cur = p.Parent, n = 0; cur && geom[cur]; cur = geom[cur].Parent, n++) {
+          if (cur === name || n > 1000) { cycle = true; break; }
+        }
+        if (cycle) {
+          errors.push(`${name}: Parent chain loops back to itself`);
+          roots.push(meshes[name]);
+        } else if (p.Parent && meshes[p.Parent]) {
           meshes[p.Parent].add(meshes[name]);
-        } else if (name !== 'World') {
+        } else {
           roots.push(meshes[name]);
         }
       });
-      
-      if (meshes['World']) {
-        roots.push(meshes['World']);
-      }
-      
+
       return { meshes, roots };
     }
 
-    function populateScene(result){
-      for (let i=geometryGroup.children.length-1;i>=0;i--){ 
-        geometryGroup.remove(geometryGroup.children[i]); 
+    // Component -> World transform in TOPAS coordinates
+    function getWorldMatrix(componentName, geom) {
+      const chain = [];
+      const seen = new Set();
+      let current = componentName;
+      while (current && geom[current] && !seen.has(current)) {
+        seen.add(current);
+        chain.push(current);
+        current = geom[current].Parent;
       }
-      
+      const matrix = new THREE.Matrix4();
+      for (let i = chain.length - 1; i >= 0; i--) matrix.multiply(localMatrix(geom[chain[i]]));
+      return matrix;
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Sources. Beam-like sources (Beam, Emittance, PhaseSpace) start in the component's XY plane
+    // and travel along its +Z. Isotropic emits from the component origin; Distributed and
+    // Volumetric emit isotropically from points inside the component's volume; Environment
+    // sends particles in from all around the component.
+    // ---------------------------------------------------------------------------------
+    const SOURCE_COLORS = {
+      Beam: 0xff3366, PhaseSpace: 0xff3366, Emittance: 0xff6699,
+      Isotropic: 0xffcc00, Distributed: 0x66ff99, Volumetric: 0x33ccff, Environment: 0xcc88ff
+    };
+    let lastMeshes = {};
+
+    function mulberry32(seed) {
+      return () => {
+        seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+        let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    function hashString(s) {
+      let h = 2166136261;
+      for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+      return h;
+    }
+
+    // n roughly even directions on the unit sphere
+    function fibonacciDirections(n) {
+      const dirs = [], golden = Math.PI * (3 - Math.sqrt(5));
+      for (let i = 0; i < n; i++) {
+        const z = 1 - 2 * (i + 0.5) / n, r = Math.sqrt(1 - z * z), a = golden * i;
+        dirs.push(new THREE.Vector3(r * Math.cos(a), r * Math.sin(a), z));
+      }
+      return dirs;
+    }
+
+    function sceneScale(geom) {
+      const w = geom.World || {};
+      const m = Math.max(num(w, 'HLX', 0), num(w, 'HLY', 0), num(w, 'HLZ', 0));
+      return m > 0 ? m : 500;
+    }
+
+    // Source points and rays are drawn over the geometry so emission inside a solid stays visible
+    function onTop(obj) {
+      obj.material.depthTest = false;
+      obj.renderOrder = 10;
+      return obj;
+    }
+
+    // Line segments (pairs of points) as one object
+    function makeSegments(pairs, color, opacity) {
+      const pos = [];
+      pairs.forEach(([a, b]) => pos.push(a.x, a.y, a.z, b.x, b.y, b.z));
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      return onTop(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color, transparent: true, opacity })));
+    }
+
+    function makePoints(points, color, size) {
+      const g = new THREE.BufferGeometry().setFromPoints(points);
+      return onTop(new THREE.Points(g, new THREE.PointsMaterial({ color, size, sizeAttenuation: false })));
+    }
+
+    // Short rays in all directions around each point
+    function isotropicStars(points, length, color, opacity) {
+      const dirs = fibonacciDirections(14), pairs = [];
+      points.forEach(p => dirs.forEach(d => pairs.push([p, p.clone().addScaledVector(d, length)])));
+      return makeSegments(pairs, color, opacity);
+    }
+
+    function drawBeamLike(name, src, type, matrix, color) {
+      const group = new THREE.Group();
+      matrix.decompose(group.position, group.quaternion, new THREE.Vector3());
+      // Beam sources with position cutoffs show their actual spot; others use the Beam ⌀ control
+      const cx = num(src, 'BeamPositionCutoffX', 0), cy = num(src, 'BeamPositionCutoffY', 0);
+      const useCutoff = type === 'Beam' && cx > 0 && cy > 0;
+      const rx = useCutoff ? cx : currentBeamRadius, ry = useCutoff ? cy : currentBeamRadius;
+      const rect = useCutoff && /rect/i.test(src.BeamPositionCutoffShape || '');
+      const len = 800;
+
+      const spot = rect ? new THREE.PlaneGeometry(2 * rx, 2 * ry) : new THREE.CircleGeometry(1, 48).scale(rx, ry, 1);
+      group.add(new THREE.Mesh(spot, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.4 })));
+
+      const outline = [];
+      if (rect) outline.push([-rx, -ry], [rx, -ry], [rx, ry], [-rx, ry]);
+      else for (let i = 0; i < 64; i++) outline.push([rx * Math.cos(TWO_PI * i / 64), ry * Math.sin(TWO_PI * i / 64)]);
+      group.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(outline.map(([x, y]) => new THREE.Vector3(x, y, 0))),
+                                   new THREE.LineBasicMaterial({ color })));
+
+      const tube = rect
+        ? new THREE.BoxGeometry(2 * rx, 2 * ry, len)
+        : new THREE.CylinderGeometry(1, 1, len, 48, 1, true).rotateX(Math.PI / 2).scale(rx, ry, 1);
+      tube.translate(0, 0, len / 2);
+      group.add(new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color, wireframe: true, transparent: true, opacity: 0.25 })));
+      group.add(new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(), 300, color, 40, 20));
+      beamGroup.add(group);
+      return group.position.clone().add(new THREE.Vector3(0, 0, Math.max(rx, ry) + 15));
+    }
+
+    function drawIsotropic(matrix, scale, color) {
+      const origin = new THREE.Vector3().setFromMatrixPosition(matrix);
+      const length = 0.15 * scale;
+      const pairs = fibonacciDirections(60).map(d => [origin, origin.clone().addScaledVector(d, length)]);
+      beamGroup.add(makeSegments(pairs, color, 0.6));
+      const tips = fibonacciDirections(60).map(d => origin.clone().addScaledVector(d, length));
+      beamGroup.add(makePoints(tips, color, 3));
+      beamGroup.add(makePoints([origin], color, 9));
+      return origin.clone().add(new THREE.Vector3(0, 0, length + 15));
+    }
+
+    // Closed solids a volume source samples from, with their component -> TOPAS-world matrices.
+    // TsCAD components use the loaded STL.
+    function componentSolids(comp, geom, meshes, recursive, material) {
+      const out = [];
+      const visit = name => {
+        const p = geom[name];
+        if (!p) return;
+        const matOk = !material || String(p.Material || '').toLowerCase() === String(material).toLowerCase();
+        if (matOk) {
+          if (p.Type === 'TsCAD') {
+            const stl = Object.values(stlMeshes).find(m => m.userData.placedBy === name);
+            if (stl) out.push({ geometry: stl.geometry, matrix: new THREE.Matrix4().compose(stl.position, stl.quaternion, stl.scale) });
+          } else if (meshes[name] && meshes[name].isMesh) {
+            out.push({ geometry: meshes[name].geometry, matrix: getWorldMatrix(name, geom) });
+          }
+        }
+        if (recursive) getChildrenOf(name, geom).forEach(visit);
+      };
+      visit(comp);
+      return out;
+    }
+
+    const SAMPLE_MATERIAL = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+    const SAMPLE_RAY = new THREE.Vector3(0.5774, 0.5771, 0.5779).normalize();
+    const sampleRaycaster = new THREE.Raycaster();
+
+    // Uniform points inside closed solids: random points in each bounding box, kept when a ray
+    // from the point crosses the surface an odd number of times
+    function samplePointsInSolids(solids, count, rng) {
+      const prepared = solids.map(s => {
+        if (!s.geometry.boundingBox) s.geometry.computeBoundingBox();
+        const size = s.geometry.boundingBox.getSize(new THREE.Vector3());
+        return { ...s, box: s.geometry.boundingBox, volume: Math.max(size.x * size.y * size.z, 1e-9),
+                 mesh: new THREE.Mesh(s.geometry, SAMPLE_MATERIAL) };
+      });
+      const total = prepared.reduce((a, s) => a + s.volume, 0);
+      const points = [];
+      for (let attempt = 0; attempt < count * 30 && points.length < count; attempt++) {
+        let pick = rng() * total, s = prepared[0];
+        for (const cand of prepared) { s = cand; if ((pick -= cand.volume) <= 0) break; }
+        const p = new THREE.Vector3(
+          s.box.min.x + rng() * (s.box.max.x - s.box.min.x),
+          s.box.min.y + rng() * (s.box.max.y - s.box.min.y),
+          s.box.min.z + rng() * (s.box.max.z - s.box.min.z));
+        sampleRaycaster.set(p, SAMPLE_RAY);
+        if (sampleRaycaster.intersectObject(s.mesh, false).length % 2 === 1) points.push(p.applyMatrix4(s.matrix));
+      }
+      return points;
+    }
+
+    function drawVolumeSource(name, src, type, comp, geom, meshes, scale, color) {
+      const recursive = type === 'Volumetric' ? src.RecursivelyIncludeChildren === true : false;
+      const solids = componentSolids(comp, geom, meshes, recursive, type === 'Volumetric' ? src.ActiveMaterial : null);
+      if (!solids.length) return null;
+      const big = solids.reduce((a, s) => a + s.geometry.getAttribute('position').count, 0) > 60000;
+      const wanted = type === 'Distributed' ? Math.round(num(src, 'NumberOfSourcePoints', 100)) : 300;
+      const count = Math.max(1, Math.min(wanted, big ? 150 : 400));
+      const points = samplePointsInSolids(solids, count, mulberry32(hashString(name)));
+      if (!points.length) return null;
+      beamGroup.add(makePoints(points, color, type === 'Distributed' ? 6 : 4));
+
+      const box = new THREE.Box3().setFromPoints(points);
+      const starLen = Math.max(2, 0.08 * box.getSize(new THREE.Vector3()).length());
+      beamGroup.add(isotropicStars(points.slice(0, 12), starLen, color, 0.5));
+      return box.getCenter(new THREE.Vector3()).setZ(box.max.z + 15);
+    }
+
+    function drawEnvironment(comp, geom, meshes, scale, color) {
+      const solids = componentSolids(comp, geom, meshes, true, null);
+      const box = new THREE.Box3();
+      solids.forEach(s => {
+        if (!s.geometry.boundingBox) s.geometry.computeBoundingBox();
+        box.union(s.geometry.boundingBox.clone().applyMatrix4(s.matrix));
+      });
+      const center = box.isEmpty() ? new THREE.Vector3().setFromMatrixPosition(getWorldMatrix(comp, geom)) : box.getCenter(new THREE.Vector3());
+      const r = box.isEmpty() ? 0.1 * scale : 0.6 * box.getSize(new THREE.Vector3()).length();
+      const shell = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16),
+        new THREE.MeshBasicMaterial({ color, wireframe: true, transparent: true, opacity: 0.12 }));
+      shell.position.copy(center);
+      beamGroup.add(shell);
+      fibonacciDirections(40).forEach(d => {
+        const start = center.clone().addScaledVector(d, r);
+        beamGroup.add(new THREE.ArrowHelper(d.clone().negate(), start, 0.35 * r, color, 0.08 * r, 0.05 * r));
+      });
+      return center.clone().add(new THREE.Vector3(0, 0, r + 15));
+    }
+
+    function drawSources(sources, geom, meshes = lastMeshes, warnings = null) {
+      lastMeshes = meshes;
+      while (beamGroup.children.length > 0) {
+        const child = beamGroup.children[0];
+        child.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+        beamGroup.remove(child);
+      }
+      const scale = sceneScale(geom);
+
+      for (const [name, src] of Object.entries(sources)) {
+        const type = src.Type || 'Beam';
+        const comp = src.Component || 'BeamPosition';
+        if (!geom[comp]) {
+          if (warnings) warnings.push(`Source ${name}: Component '${comp}' not found`);
+          continue;
+        }
+        const color = SOURCE_COLORS[type] !== undefined ? SOURCE_COLORS[type] : 0xff3366;
+        const matrix = getWorldMatrix(comp, geom);
+        let labelPos;
+        if (type === 'Isotropic') {
+          labelPos = drawIsotropic(matrix, scale, color);
+        } else if (type === 'Distributed' || type === 'Volumetric') {
+          labelPos = drawVolumeSource(name, src, type, comp, geom, meshes, scale, color);
+          if (!labelPos) {
+            if (warnings) warnings.push(`Source ${name}: no drawable volume in '${comp}'${src.ActiveMaterial ? ` with material ${src.ActiveMaterial}` : ''}; showing its origin`);
+            labelPos = drawIsotropic(matrix, scale, color);
+          }
+        } else if (type === 'Environment') {
+          labelPos = drawEnvironment(comp, geom, meshes, scale, color);
+        } else {
+          labelPos = drawBeamLike(name, src, type, matrix, color);
+        }
+        const label = makeTextSprite(`${type}: ${name}`, color);
+        label.position.copy(labelPos);
+        beamGroup.add(label);
+      }
+    }
+
+    function makeTextSprite(text, color) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+      ctx.font = 'bold 24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+      const texture = new THREE.CanvasTexture(canvas);
+      const mat = new THREE.SpriteMaterial({ map: texture });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(80, 20, 1);
+      return sprite;
+    }
+
+    function makeAxisLabel(text, color) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+      ctx.font = 'bold 48px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 32, 32);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas) }));
+      sprite.scale.set(16, 16, 1);
+      return sprite;
+    }
+
+    // STL vertices stay exactly as in the file; TsCAD placement and Units are applied in syncSTLPositions
+    function loadSTL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          try {
+            const loader = new THREE.STLLoader();
+            const geom = loader.parse(e.target.result);
+            geom.computeVertexNormals();
+            resolve({ name: file.name, geometry: geom });
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = () => reject(new Error('Failed to read ' + file.name));
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    // TOPAS InputFile has no extension ("Tumor_clean" loads Tumor_clean.stl)
+    function stlKey(fileName) {
+      return String(fileName).split(/[\\/]/).pop().replace(/\.(stl|ply)$/i, '').toLowerCase();
+    }
+
+    function getSTLColor(filename) {
+      const name = filename.toLowerCase();
+      if (name.includes('tumor') || name.includes('gtv') || name.includes('ctv')) return 0xff2244;
+      if (name.includes('bone') || name.includes('skull')) return 0xf0e0c0;
+      if (name.includes('air') || name.includes('sinus')) return 0x66ddff;
+      if (name.includes('skin') || name.includes('body')) return 0xffaa99;
+      if (name.includes('brain')) return 0xddaadd;
+      if (name.includes('tissue') || name.includes('soft')) return 0xff9988;
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash) + name.charCodeAt(i);
+      return Math.abs(hash) & 0xffffff;
+    }
+
+    function getSTLOpacity(filename) {
+      const name = filename.toLowerCase();
+      if (name.includes('tumor')) return 0.85;
+      if (name.includes('skin') || name.includes('body')) return 0.2;
+      if (name.includes('bone')) return 0.4;
+      return 0.5;
+    }
+
+    function getSTLMaterial(filename) {
+      const name = filename.toLowerCase();
+      if (name.includes('tumor') || name.includes('gtv') || name.includes('ctv')) return 'G4_TISSUE_SOFT_ICRP';
+      if (name.includes('bone') || name.includes('skull')) return 'G4_BONE_CORTICAL_ICRP';
+      if (name.includes('air') || name.includes('sinus')) return 'G4_AIR';
+      if (name.includes('lung')) return 'G4_LUNG_ICRP';
+      if (name.includes('brain')) return 'G4_BRAIN_ICRP';
+      if (name.includes('muscle')) return 'G4_MUSCLE_SKELETAL_ICRP';
+      return 'G4_TISSUE_SOFT_ICRP';
+    }
+
+    function makeComponentName(filename) {
+      let name = filename.replace(/\.stl$/i, '');
+      name = name.replace(/^Segmentation[_\-]?/i, '');
+      name = name.replace(/[^a-zA-Z0-9]/g, '');
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+
+    function generateTOPASParams(filename) {
+      const componentName = makeComponentName(filename);
+      const material = getSTLMaterial(filename);
+      const colorName = filename.toLowerCase().includes('tumor') ? 'red' :
+                        filename.toLowerCase().includes('bone') ? 'white' :
+                        filename.toLowerCase().includes('air') ? 'lightblue' : 'pink';
+
+      return `
+##### ${componentName} from ${filename}
+s:Ge/${componentName}/Type        = "TsCAD"
+s:Ge/${componentName}/Parent      = "Patient"
+s:Ge/${componentName}/InputFile   = "${filename.replace(/\.stl$/i, '')}"
+s:Ge/${componentName}/FileFormat  = "stl"
+d:Ge/${componentName}/Units       = 1.0 mm
+s:Ge/${componentName}/Material    = "${material}"
+s:Ge/${componentName}/Color       = "${colorName}"
+`;
+    }
+
+    async function handleSTLFiles(files) {
+      const promises = Array.from(files).map(loadSTL);
+      try {
+        const results = await Promise.all(promises);
+        const referenced = new Set(Object.values(parsedGeometry)
+          .filter(p => p.Type === 'TsCAD' && p.InputFile).map(p => stlKey(p.InputFile)));
+        let appendText = '';
+        for (const { name, geometry } of results) {
+          if (stlMeshes[name]) {
+            stlGroup.remove(stlMeshes[name]);
+            stlMeshes[name].geometry.dispose();
+            stlMeshes[name].material.dispose();
+          }
+          const color = getSTLColor(name);
+          const opacity = getSTLOpacity(name);
+          const mat = new THREE.MeshPhongMaterial({
+            color,
+            transparent: true,
+            opacity,
+            side: THREE.DoubleSide,
+            wireframe: wireframeMode
+          });
+          const mesh = new THREE.Mesh(geometry, mat);
+          mesh.name = name;
+          stlGroup.add(mesh);
+          stlMeshes[name] = mesh;
+          if (!referenced.has(stlKey(name))) appendText += generateTOPASParams(name);
+        }
+
+        if (appendText) {
+          const currentText = editor.getValue();
+          const hasPatient = /s:Ge\/Patient\/Type/.test(currentText);
+          const patientBlock = hasPatient ? '' : `
+##### Patient parent volume (soft tissue background)
+s:Ge/Patient/Type     = "TsBox"
+s:Ge/Patient/Parent   = "World"
+d:Ge/Patient/HLX      = 150 mm
+d:Ge/Patient/HLY      = 150 mm
+d:Ge/Patient/HLZ      = 150 mm
+s:Ge/Patient/Material = "G4_TISSUE_SOFT_ICRP"
+`;
+          editor.setValue(currentText + '\n' + patientBlock + appendText);
+        }
+
+        updateGeometry();
+        fitToView();
+      } catch (err) {
+        console.error('STL load error:', err);
+        alert('Error loading STL: ' + err.message);
+      }
+    }
+
+    function updateSTLList() {
+      const list = document.getElementById('stlList');
+      list.innerHTML = '';
+      const names = Object.keys(stlMeshes);
+      if (names.length === 0) {
+        list.style.display = 'none';
+        return;
+      }
+      list.style.display = 'block';
+
+      for (const name of names) {
+        const mesh = stlMeshes[name];
+        const colorHex = '#' + mesh.material.color.getHexString();
+        const placed = mesh.userData.placedBy;
+        const div = document.createElement('div');
+        div.className = 'stl-item';
+        div.innerHTML = `
+          <input type="checkbox" ${mesh.visible ? 'checked' : ''} />
+          <span class="color-swatch" style="background:${colorHex}"></span>
+          <span style="flex:1"></span>
+          <span class="${placed ? 'stl-placed' : 'stl-unplaced'}"></span>
+        `;
+        div.children[2].textContent = name;
+        div.children[3].textContent = placed ? `→ ${placed}` : 'no TsCAD: raw file coords';
+        div.querySelector('input').addEventListener('change', e => {
+          mesh.visible = e.target.checked;
+        });
+        list.appendChild(div);
+      }
+    }
+
+    function clearSTLs() {
+      while (stlGroup.children.length > 0) {
+        const m = stlGroup.children[0];
+        if (m.geometry) m.geometry.dispose();
+        if (m.material) m.material.dispose();
+        stlGroup.remove(m);
+      }
+      stlMeshes = {};
+      updateSTLList();
+    }
+
+    // Place each loaded STL like TOPAS does: file coordinates x Units, then the TsCAD component's
+    // transform chain. STLs no TsCAD refers to stay in raw file coordinates (World frame, mm).
+    function syncSTLPositions(geom, warnings) {
+      for (const mesh of Object.values(stlMeshes)) {
+        mesh.position.set(0, 0, 0);
+        mesh.quaternion.identity();
+        mesh.scale.set(1, 1, 1);
+        mesh.userData.placedBy = null;
+      }
+      for (const [name, p] of Object.entries(geom)) {
+        if (p.Type !== 'TsCAD' || !p.InputFile) continue;
+        const key = stlKey(p.InputFile);
+        const entry = Object.entries(stlMeshes).find(([stlName]) => stlKey(stlName) === key);
+        if (!entry) {
+          warnings.push(`${name}: load ${key}.stl to display this TsCAD`);
+          continue;
+        }
+        const stlMesh = entry[1];
+        const units = num(p, 'Units', 1);
+        const m = getWorldMatrix(name, geom).multiply(new THREE.Matrix4().makeScale(units, units, units));
+        m.decompose(stlMesh.position, stlMesh.quaternion, stlMesh.scale);
+        stlMesh.userData.placedBy = name;
+      }
+    }
+
+    function populateScene(result){
+      for (let i=geometryGroup.children.length-1;i>=0;i--){
+        geometryGroup.remove(geometryGroup.children[i]);
+      }
+      while (scorerGroup.children.length > 0) scorerGroup.remove(scorerGroup.children[0]);
+
       parsedGeometry = result.geometry;
-      const { meshes, roots } = buildHierarchy(parsedGeometry);
-      
-      roots.forEach(root => geometryGroup.add(root));
-      
+      parsedSources = result.sources || {};
+      parsedScorers = result.scorers || {};
       const warnings = [...result.warnings];
+      const errors = [...result.errors];
+
+      const { meshes, roots } = buildHierarchy(parsedGeometry, errors);
+      roots.forEach(root => geometryGroup.add(root));
+
+      syncSTLPositions(parsedGeometry, warnings);
+      updateSTLList();
+      drawSources(parsedSources, parsedGeometry, meshes, warnings);
+      scene.updateMatrixWorld(true);
+
+      // Dynamic Dose Scorer Box Outlines
+      let activeScorersFound = false;
+      Object.values(parsedScorers).forEach(sc => {
+        const compName = sc.Component;
+        if (compName && meshes[compName]) {
+          const targetMesh = meshes[compName];
+          const targetBox = new THREE.BoxHelper(targetMesh, 0x00ffcc);
+          scorerGroup.add(targetBox);
+          activeScorersFound = true;
+        }
+      });
+      document.getElementById('scorerIndicator').style.display = activeScorersFound ? 'inline-block' : 'none';
+
       checkHierarchyOverlaps(parsedGeometry, meshes, warnings);
-      
       applyWireframe();
-      fitToView();
-      
-      return { warnings, errors: result.errors };
+
+      return { warnings, errors };
     }
 
     function renderWarnings(warns, errs){
       const el = document.getElementById('warnings');
       el.innerHTML = '';
-      
-      if (errs.length===0 && warns.length===0){ 
-        el.innerHTML = `<span class="pill ok">✓ Geometry looks good</span>`; 
-        return; 
+
+      if (errs.length===0 && warns.length===0){
+        el.innerHTML = `<span class="pill ok">✓ Geometry looks good</span>`;
+        return;
       }
-      
+
       errs.forEach(e=>{
-        const d=document.createElement('div'); 
-        d.className='logline'; 
-        d.style.borderColor='rgba(244,67,54,.35)'; 
-        d.innerHTML = `⚠ <span>${e}</span>`; 
-        el.appendChild(d); 
+        const d=document.createElement('div');
+        d.className='logline';
+        d.style.borderColor='rgba(244,67,54,.35)';
+        d.textContent = `⚠ ${e}`;
+        el.appendChild(d);
       });
-      
+
       warns.forEach(w=>{
-        const d=document.createElement('div'); 
-        d.className='logline'; 
-        d.style.borderColor='rgba(255,152,0,.35)'; 
-        d.innerHTML = `⚠ <span>${w}</span>`; 
-        el.appendChild(d); 
+        const d=document.createElement('div');
+        d.className='logline';
+        d.style.borderColor='rgba(255,152,0,.35)';
+        d.textContent = `⚠ ${w}`;
+        el.appendChild(d);
       });
     }
 
+    // World-space bounds of the visible meshes
+    function visibleBounds(groups) {
+      scene.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      groups.forEach(g => g.traverseVisible(o => {
+        if (!o.isMesh || (o.material && o.material.visible === false)) return;
+        if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+        box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));
+      }));
+      return box;
+    }
+
     function fitToView(){
-      if (geometryGroup.children.length===0) return;
-      const box = new THREE.Box3().setFromObject(geometryGroup);
+      const box = visibleBounds([geometryGroup, stlGroup, beamGroup]);
+      if (box.isEmpty()) return;
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
       const dist = maxDim * 1.75 + 1;
-      
+
       camera.position.set(center.x + dist, center.y + dist*0.8, center.z + dist);
-      controls.target.copy(center); 
+      controls.target.copy(center);
       controls.update();
     }
 
+    // Screen axes: up = TOPAS +Z, right = TOPAS +X, toward the viewer = TOPAS -Y
     function setNamedView(name){
-      const box = new THREE.Box3().setFromObject(geometryGroup);
+      let box = visibleBounds([geometryGroup, stlGroup]);
+      if (box.isEmpty()) box = new THREE.Box3(new THREE.Vector3(-100, -100, -100), new THREE.Vector3(100, 100, 100));
       const center = box.getCenter(new THREE.Vector3());
       const size = box.getSize(new THREE.Vector3());
       const d = Math.max(size.x, size.y, size.z) * 1.4 + 1;
-      
-      if (name==='top') camera.position.set(center.x, center.y + d, center.z);
+
+      if (name==='top') camera.position.set(center.x, center.y + d, center.z + d * 1e-3);
       else if (name==='front') camera.position.set(center.x, center.y, center.z + d);
       else if (name==='right') camera.position.set(center.x + d, center.y, center.z);
       else camera.position.set(center.x + d, center.y + d*0.8, center.z + d);
-      
-      controls.target.copy(center); 
+
+      controls.target.copy(center);
       controls.update();
     }
 
-    function applyWireframe(){ 
+    function applyWireframe(){
       geometryGroup.traverse(o=>{
-        if (o.isMesh){ 
-          o.material.wireframe = wireframeMode; 
-          o.material.opacity = currentOpacity; 
-          o.material.needsUpdate = true; 
-        } 
-      }); 
+        if (o.isMesh){
+          o.material.wireframe = wireframeMode || !!o.userData.wire;
+          o.material.opacity = currentOpacity;
+          o.material.needsUpdate = true;
+        }
+      });
+      stlGroup.traverse(o => {
+        if (o.isMesh) {
+          o.material.wireframe = wireframeMode;
+          o.material.needsUpdate = true;
+        }
+      });
     }
 
-    function debounce(fn, ms){ 
-      let t; 
+    const SHAPE_COLORS = ['lightblue', 'orange', 'grass', 'magenta', 'yellow', 'violet', 'skyblue', 'pink', 'red', 'turquoise'];
+
+    // Source templates (parameter names from the TOPAS examples). Sources that need a place or a
+    // volume get their own component; beam-like ones use TOPAS's BeamPosition.
+    const SOURCE_TEMPLATES = {
+      Beam: { params: ['s:BeamParticle = "proton"', 'd:BeamEnergy = 150 MeV', 'u:BeamEnergySpread = 0.757504',
+        's:BeamPositionDistribution = "Gaussian"', 's:BeamPositionCutoffShape = "Ellipse"',
+        'd:BeamPositionCutoffX = 10 mm', 'd:BeamPositionCutoffY = 10 mm',
+        'd:BeamPositionSpreadX = 3 mm', 'd:BeamPositionSpreadY = 3 mm',
+        's:BeamAngularDistribution = "Gaussian"', 'd:BeamAngularCutoffX = 90 deg', 'd:BeamAngularCutoffY = 90 deg',
+        'd:BeamAngularSpreadX = 0.0032 rad', 'd:BeamAngularSpreadY = 0.0032 rad', 'i:NumberOfHistoriesInRun = 100'] },
+      PhaseSpace: { params: ['s:PhaseSpaceFileName = ""', 'i:PhaseSpaceMultipleUse = 0',
+        'b:PhaseSpaceIncludeEmptyHistories = "False"', 'b:PhaseSpacePreCheck = "True"'] },
+      Emittance: { params: ['s:BeamParticle = "proton"', 'd:BeamEnergy = 94 MeV', 'u:BeamEnergySpread = 1.0',
+        's:Distribution = "BiGaussian"', 'd:SigmaX = 2.0 mm', 'u:SigmaXprime = 0.0032', 'u:CorrelationX = -0.8',
+        'd:SigmaY = 2.0 mm', 'u:SigmaYPrime = 0.0032', 'u:CorrelationY = 0.4', 'i:NumberOfHistoriesInRun = 100'] },
+      Isotropic: { volume: 'Group', params: ['s:BeamParticle = "gamma"', 'd:BeamEnergy = 100 keV',
+        'u:BeamEnergySpread = 0', 'i:NumberOfHistoriesInRun = 100'] },
+      Distributed: { volume: 'TsSphere', params: ['s:BeamParticle = "gamma"', 'd:BeamEnergy = 10 keV',
+        'u:BeamEnergySpread = 0', 'i:NumberOfSourcePoints = 100', 's:PointDistribution = "Flat"',
+        'b:RedistributePointsOnNewRun = "False"', 'i:NumberOfHistoriesInRun = 100'] },
+      Volumetric: { volume: 'TsCylinder', params: ['s:ActiveMaterial = "G4_WATER"', 's:BeamParticle = "e-"',
+        'd:BeamEnergy = 1 MeV', 'u:BeamEnergySpread = 0', 'b:RecursivelyIncludeChildren = "True"',
+        'i:MaxNumberOfPointsToSample = 1000000', 'i:NumberOfHistoriesInRun = 100'] },
+      Environment: { volume: 'TsBox', params: ['s:BeamParticle = "proton"', 'd:BeamEnergy = 200 MeV',
+        'i:NumberOfHistoriesInRun = 100'] },
+    };
+
+    function uniqueName(base, taken) {
+      let name = base, i = 2;
+      while (taken[name]) name = base + i++;
+      return name;
+    }
+
+    // "d:HLX = 30 mm" style template -> full parameter line
+    function templateLine(category, owner, t) {
+      const [, prefix, prop, value] = t.match(/^(\w+):(\w+)\s*=\s*(.*)$/);
+      return `${prefix}:${category}/${owner}/${prop.padEnd(12)} = ${value}`;
+    }
+
+    function componentBlock(type, name) {
+      const line = (prefix, prop, value) => `${prefix}:Ge/${name}/${prop.padEnd(12)} = ${value}`;
+      const color = SHAPE_COLORS[Object.keys(parsedGeometry).length % SHAPE_COLORS.length];
+      return [
+        line('s', 'Type', `"${type}"`),
+        line('s', 'Parent', '"World"'),
+        ...(type === 'Group' ? [] : [line('s', 'Material', '"G4_WATER"')]),
+        ...['TransX', 'TransY', 'TransZ'].map(t => line('d', t, '0 mm')),
+        ...['RotX', 'RotY', 'RotZ'].map(r => line('d', r, '0 deg')),
+        ...(SHAPES[type] ? SHAPES[type].tpl.map(t => templateLine('Ge', name, t)) : []),
+        ...(type === 'Group' ? [] : [line('s', 'Color', `"${color}"`)])
+      ];
+    }
+
+    function appendBlock(lines) {
+      const lastLine = editor.lastLine();
+      const text = (editor.getLine(lastLine).trim() ? '\n\n' : '\n') + lines.join('\n') + '\n';
+      editor.replaceRange(text, { line: lastLine, ch: editor.getLine(lastLine).length });
+      editor.scrollIntoView({ line: editor.lastLine(), ch: 0 });
+      updateGeometry();
+    }
+
+    function insertShapeTemplate(type) {
+      const name = uniqueName(type.replace(/^(Ts|G4)/, ''), parsedGeometry);
+      appendBlock([`# ${type}`, ...componentBlock(type, name)]);
+    }
+
+    function insertSourceTemplate(type) {
+      const t = SOURCE_TEMPLATES[type];
+      const name = uniqueName(type + 'Source', parsedSources);
+      const lines = [`# ${type} source`];
+      let comp = 'BeamPosition';
+      if (t.volume) {
+        comp = uniqueName(name + (t.volume === 'Group' ? 'Position' : 'Volume'), parsedGeometry);
+        lines.push(...componentBlock(t.volume, comp), '');
+      }
+      const line = (prefix, prop, value) => `${prefix}:So/${name}/${prop.padEnd(12)} = ${value}`;
+      lines.push(line('s', 'Type', `"${type}"`), line('s', 'Component', `"${comp}"`),
+                 ...t.params.map(p => templateLine('So', name, p)));
+      appendBlock(lines);
+    }
+
+    function debounce(fn, ms){
+      let t;
       return (...args)=>{
-        clearTimeout(t); 
-        t=setTimeout(()=>fn.apply(null,args), ms); 
-      }; 
+        clearTimeout(t);
+        t=setTimeout(()=>fn.apply(null,args), ms);
+      };
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Parameter menu: click a Ge/<Component>/... line to add that component's missing
+    // parameters, written in with the value left blank.
+    // ---------------------------------------------------------------------------------
+    const PLACEMENT_SPECS = {
+      'Translation': ['d:TransX mm', 'd:TransY mm', 'd:TransZ mm'],
+      'Rotation': ['d:RotX deg', 'd:RotY deg', 'd:RotZ deg'],
+      'Other': ['s:Parent', 's:Material', 's:Color', 's:DrawingStyle', 'b:Invisible']
+    };
+    const CAD_SPECS = ['s:InputFile', 's:FileFormat', 'd:Units mm'];
+
+    function parseSpec(spec) {
+      const [, prefix, name, unit] = spec.match(/^(\w+):(\w+)(?:\s+(\S+))?$/);
+      return { prefix, name, unit: unit || '' };
+    }
+
+    // "d:HLX = 30 mm" -> { prefix: 'd', name: 'HLX', unit: 'mm' }
+    function specFromTemplate(t) {
+      const [, prefix, name, value] = t.match(/^(\w+):(\w+)\s*=\s*(.*)$/);
+      const last = value.trim().split(/\s+/).pop();
+      return { prefix, name, unit: /^[a-z]+$/i.test(last) ? last : '' };
+    }
+
+    function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+    // Scan the editor text for one component: which parameters it sets, its Type, and its last line
+    function scanComponent(comp) {
+      const re = new RegExp('^\\s*\\w+:\\s*Ge/' + escapeRegExp(comp) + '/([^/=\\s]+)\\s*=\\s*(.*)$', 'i');
+      const props = new Set();
+      let type = null, lastLine = -1;
+      editor.eachLine(h => {
+        const m = stripComment(h.text).match(re);
+        if (!m) return;
+        props.add(m[1].toLowerCase());
+        lastLine = editor.getLineNumber(h);
+        if (m[1].toLowerCase() === 'type') {
+          const q = m[2].match(/"([^"]*)"/);
+          if (q) type = normalizeType(q[1]);
+        }
+      });
+      return { props, type, lastLine };
+    }
+
+    function paramGroupsFor(type) {
+      const groups = [];
+      if (!type) {
+        groups.push({ label: 'Type', items: [...Object.keys(SHAPES), 'Group', 'TsCAD']
+          .map(t => ({ prefix: 's', name: 'Type', unit: '', value: t })) });
+      } else if (SHAPES[type]) {
+        groups.push({ label: `Size / shape (${type})`, items: SHAPES[type].tpl.map(specFromTemplate) });
+      } else if (type === 'TsCAD') {
+        groups.push({ label: 'CAD file', items: CAD_SPECS.map(parseSpec) });
+      }
+      for (const [label, specs] of Object.entries(PLACEMENT_SPECS)) {
+        groups.push({ label, items: specs.map(parseSpec) });
+      }
+      return groups;
+    }
+
+    // Line text for a parameter with a blank value, plus where the cursor goes
+    function blankParamLine(comp, item) {
+      const head = `${item.prefix}:Ge/${comp}/${item.name} = `;
+      if (item.value) return { text: `${head}"${item.value}"`, ch: head.length + item.value.length + 2 };
+      if (item.prefix === 's' || item.prefix === 'b') return { text: `${head}""`, ch: head.length + 1 };
+      if (item.unit) return { text: `${head} ${item.unit}`, ch: head.length };
+      return { text: head, ch: head.length };
+    }
+
+    let paramMenuItems = [];
+    let paramMenuComp = null;
+
+    function hideParamMenu() {
+      document.getElementById('paramMenu').style.display = 'none';
+      paramMenuComp = null;
+    }
+
+    function showParamMenu() {
+      if (editor.somethingSelected()) return hideParamMenu();
+      const cur = editor.getCursor();
+      const m = stripComment(editor.getLine(cur.line)).match(/^\s*[A-Za-z]{1,3}:\s*Ge\/(\S+)\/[^\/=\s]+\s*=/);
+      if (!m) return hideParamMenu();
+      const comp = m[1];
+      const { props, type } = scanComponent(comp);
+
+      const list = document.getElementById('paramMenuList');
+      list.innerHTML = '';
+      paramMenuItems = [];
+      let rows = 0;
+      for (const group of paramGroupsFor(type)) {
+        const items = group.items.filter(it => it.value || !props.has(it.name.toLowerCase()));
+        if (!items.length) continue;
+        const og = document.createElement('optgroup');
+        og.label = group.label;
+        for (const it of items) {
+          const opt = document.createElement('option');
+          opt.value = String(paramMenuItems.length);
+          opt.textContent = it.value ? it.value : `${it.name}${it.unit ? '  (' + it.unit + ')' : ''}`;
+          og.appendChild(opt);
+          paramMenuItems.push(it);
+        }
+        list.appendChild(og);
+        rows += items.length + 1;
+      }
+      if (!paramMenuItems.length) return hideParamMenu();
+      list.size = Math.min(rows, 14);
+      list.selectedIndex = -1;
+
+      paramMenuComp = comp;
+      document.getElementById('paramMenuTitle').textContent = `Add to ${comp}${type ? ' (' + type + ')' : ''}`;
+      const menu = document.getElementById('paramMenu');
+      menu.style.display = 'block';
+      const coords = editor.cursorCoords(cur, 'window');
+      const w = menu.offsetWidth, h = menu.offsetHeight;
+      const left = Math.min(coords.left, window.innerWidth - w - 8);
+      const top = coords.bottom + 4 + h > window.innerHeight ? coords.top - h - 4 : coords.bottom + 4;
+      menu.style.left = Math.max(8, left) + 'px';
+      menu.style.top = Math.max(8, top) + 'px';
+    }
+
+    function insertParam(item) {
+      const comp = paramMenuComp;
+      hideParamMenu();
+      if (!comp) return;
+      const { lastLine } = scanComponent(comp);
+      const { text, ch } = blankParamLine(comp, item);
+      const at = lastLine >= 0 ? lastLine : editor.getCursor().line;
+      editor.replaceRange('\n' + text, { line: at, ch: editor.getLine(at).length });
+      editor.setCursor({ line: at + 1, ch });
+      editor.focus();
+    }
+
+    function initParamMenu() {
+      editor.getWrapperElement().addEventListener('click', showParamMenu);
+      editor.on('keydown', hideParamMenu);
+      editor.on('scroll', hideParamMenu);
+      document.addEventListener('mousedown', e => {
+        if (!document.getElementById('paramMenu').contains(e.target)) hideParamMenu();
+      });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') hideParamMenu(); });
+      document.getElementById('paramMenuList').addEventListener('change', e => {
+        const item = paramMenuItems[parseInt(e.target.value, 10)];
+        if (item) insertParam(item);
+      });
     }
 
     function updateGeometry(){
@@ -783,28 +2086,79 @@ s:Ge/InnerBox/Material = "Aluminum"
     window.addEventListener('load', ()=>{
       initThree();
       initEditor();
+      initParamMenu();
       updateGeometry();
-      
+
       document.getElementById('btnUpdate').onclick = updateGeometry;
+
+      document.getElementById('btnDownload').onclick = () => {
+        const text = editor.getValue();
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const element = document.createElement('a');
+        element.href = URL.createObjectURL(blob);
+        element.download = "topas_quickview_config.txt";
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+      };
+
       document.getElementById('btnFit').onclick = fitToView;
-      document.getElementById('btnReset').onclick = ()=>{ 
-        camera.position.set(300,240,300); 
-        controls.target.set(0,0,0); 
+      document.getElementById('btnReset').onclick = ()=>{
+        camera.position.set(300,240,300);
+        controls.target.set(0,0,0);
         controls.update();
       };
-      document.getElementById('btnWire').onclick = ()=>{ 
-        wireframeMode=!wireframeMode; 
-        applyWireframe(); 
+      document.getElementById('btnWire').onclick = ()=>{
+        wireframeMode=!wireframeMode;
+        applyWireframe();
       };
-      document.getElementById('btnAxes').onclick = ()=>{ 
-        showAxes=!showAxes; 
-        axesHelper.visible=showAxes; 
+      document.getElementById('btnAxes').onclick = ()=>{
+        showAxes=!showAxes;
+        axesHelper.visible=showAxes;
       };
-      document.getElementById('opacity').oninput = (e)=>{ 
-        currentOpacity = parseFloat(e.target.value); 
-        applyWireframe(); 
+      document.getElementById('opacity').oninput = (e)=>{
+        currentOpacity = parseFloat(e.target.value);
+        applyWireframe();
       };
-      
+      document.getElementById('beamRadius').oninput = (e) => {
+        currentBeamRadius = parseFloat(e.target.value) || 30;
+        drawSources(parsedSources, parsedGeometry);
+      };
+      document.getElementById('rotConv').onchange = (e) => {
+        rotConvention = e.target.value;
+        updateGeometry();
+      };
+
+      const shapeSelect = document.getElementById('shapeInsert');
+      [['Shapes', 'shape', Object.keys(SHAPES)], ['Sources', 'source', Object.keys(SOURCE_TEMPLATES)]].forEach(([label, kind, types]) => {
+        const group = document.createElement('optgroup');
+        group.label = label;
+        types.forEach(type => {
+          const opt = document.createElement('option');
+          opt.value = `${kind}:${type}`;
+          opt.textContent = type;
+          group.appendChild(opt);
+        });
+        shapeSelect.appendChild(group);
+      });
+      shapeSelect.onchange = (e) => {
+        const [kind, type] = e.target.value.split(':');
+        if (kind === 'shape') insertShapeTemplate(type);
+        else if (kind === 'source') insertSourceTemplate(type);
+        e.target.value = '';
+      };
+
+      document.getElementById('btnLoadSTL').onclick = () => {
+        document.getElementById('stlFileInput').click();
+      };
+      document.getElementById('stlFileInput').onchange = (e) => {
+        if (e.target.files.length > 0) {
+          handleSTLFiles(e.target.files);
+        }
+        e.target.value = '';
+      };
+      document.getElementById('btnClearSTL').onclick = clearSTLs;
+
       document.querySelectorAll('.controls [data-view]').forEach(btn=>
         btn.addEventListener('click', ()=> setNamedView(btn.getAttribute('data-view')))
       );
