@@ -63,6 +63,10 @@
     .stl-placed { color: #8be28b; }
     .stl-unplaced { color: #ffbd5a; }
     .color-swatch { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #555; display: inline-block; }
+    .field-colorbar { position:absolute; top:10px; right:10px; display:none; align-items:stretch; gap:6px; background:rgba(0,0,0,0.7); backdrop-filter: blur(3px); border:1px solid #333; border-radius:8px; padding:8px 10px; font-size:11px; color:#ddd; z-index:10; }
+    .field-colorbar .bar { width:12px; height:140px; border-radius:2px; border:1px solid #555; }
+    .field-colorbar .ticks { display:flex; flex-direction:column; justify-content:space-between; font-variant-numeric: tabular-nums; }
+    .field-colorbar .title { writing-mode: vertical-rl; transform: rotate(180deg); text-align:center; color:#bbb; }
     .param-menu { position: fixed; z-index: 50; display: none; background: #1a1a1a; border: 1px solid #3a3a3a; border-radius: 8px; padding: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.5); font-size: 12px; }
     .param-menu .title { color: #bbb; padding: 2px 4px 6px; }
     .param-menu select { background: #111; color: var(--text); border: 1px solid #333; border-radius: 6px; font-size: 12px; min-width: 240px; outline: none; }
@@ -84,9 +88,11 @@
         <button class="btn secondary" id="btnReset">Reset Camera</button>
         <button class="btn secondary" id="btnWire">Wireframe</button>
         <button class="btn secondary" id="btnAxes">Axes</button>
+        <button class="btn secondary" id="btnField" title="Show/hide magnetic field arrows">B-Field</button>
+        <label class="badge" title="Field arrows along the longest side of each magnetized component">Arrows <input id="fieldDensity" type="number" value="8" min="2" max="30" step="1" style="width: 40px; background: #1a1a1a; color: white; border: 1px solid #333; border-radius: 4px; padding: 2px 4px;"/></label>
         <button class="btn secondary" id="btnLoadSTL">Load STL(s)</button>
         <button class="btn secondary" id="btnClearSTL">Clear STLs</button>
-        <select id="shapeInsert" title="Append a TOPAS shape or source with all of its parameters"><option value="">+ Add</option></select>
+        <select id="shapeInsert" title="Append a TOPAS shape, source or field with all of its parameters"><option value="">+ Add</option></select>
         <label class="badge" title="How RotX/RotY/RotZ are applied">Rotations
           <select id="rotConv">
             <option value="g4">TOPAS (Geant4 frame)</option>
@@ -115,6 +121,11 @@
         Kevin Willy, Dartmouth College
       </div>
       <canvas id="viewer"></canvas>
+      <div class="field-colorbar" id="fieldColorbar">
+        <div class="title">|B| (T)</div>
+        <div class="bar" id="fieldColorbarBar"></div>
+        <div class="ticks"><span id="fieldColorbarMax"></span><span id="fieldColorbarMid"></span><span id="fieldColorbarMin"></span></div>
+      </div>
       <div class="legend">Scroll: zoom • Drag: orbit • Right-drag: pan • Axes: TOPAS X red, Y green, Z blue (Z up)</div>
       <div class="cite-note">Please cite when used: Willy, K. (2025). Kevin's Quick View. Zenodo. <a href="https://doi.org/10.5281/zenodo.20511964" target="_blank" rel="noopener">https://doi.org/10.5281/zenodo.20511964</a></div>
     </div>
@@ -132,11 +143,14 @@
     let geometryGroup = new THREE.Group();
     let beamGroup = new THREE.Group();
     let stlGroup = new THREE.Group();
+    let fieldGroup = new THREE.Group();
     let scorerGroup = new THREE.Group();  // BoxHelpers are in world coordinates, so they sit outside topasRoot
     let stlMeshes = {};
     let wireframeMode = false;
     let showAxes = true;
     let currentBeamRadius = 30;
+    let showField = true;
+    let fieldDensity = 8;
     let rotConvention = 'g4';
 
     class SimpleOrbitControls {
@@ -312,6 +326,7 @@
       topasRoot.add(geometryGroup);
       topasRoot.add(beamGroup);
       topasRoot.add(stlGroup);
+      topasRoot.add(fieldGroup);
       window.addEventListener('resize', onResize);
       animate();
     }
@@ -407,6 +422,8 @@ s:Sc/DoseScorer/OutputFile = "dose_output"
     const materials = {
       'Air': { color: 0x87ceeb, opacity: 0.15 },
       'G4_AIR': { color: 0x87ceeb, opacity: 0.15 },
+      'Vacuum': { color: 0x445566, opacity: 0.15 },
+      'G4_Galactic': { color: 0x445566, opacity: 0.15 },
       'Water': { color: 0x4169e1, opacity: 0.55 },
       'G4_WATER': { color: 0x4169e1, opacity: 0.55 },
       'Aluminum': { color: 0xc0c0c0, opacity: 0.8 },
@@ -432,7 +449,10 @@ s:Sc/DoseScorer/OutputFile = "dose_output"
     // ---------------------------------------------------------------------------------
     const UNIT_FACTORS = {
       nm: 1e-6, um: 1e-3, mm: 1, cm: 10, m: 1000, km: 1e6,
-      rad: 1, mrad: 1e-3, deg: Math.PI / 180, degree: Math.PI / 180, degrees: Math.PI / 180
+      rad: 1, mrad: 1e-3, deg: Math.PI / 180, degree: Math.PI / 180, degrees: Math.PI / 180,
+      // Magnetic fields -> tesla, gradients -> T/mm (positions are in mm)
+      t: 1, tesla: 1, mt: 1e-3, millitesla: 1e-3, gauss: 1e-4, kilogauss: 0.1,
+      't/m': 1e-3, 'tesla/m': 1e-3, 't/cm': 0.1, 't/mm': 1, 'gauss/cm': 1e-5
     };
     const REF_RE = /^[A-Za-z]{2}\/[^\/\s]+\/\S+$/;
     const NUM_RE = /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/;
@@ -618,7 +638,9 @@ s:Sc/DoseScorer/OutputFile = "dose_output"
       'ZBottom', 'ZTop', 'ZMax', 'R1', 'R2', 'IR', 'OR', 'IS', 'OS',
       'Anchor', 'P2', 'P3', 'P4', 'Polygons', 'Off1', 'Off2', 'Scale1', 'Scale2',
       'Twist', 'Vertices', 'EndInnerRad', 'EndOuterRad',
-      'InputFile', 'FileFormat', 'Units', 'Component', 'Quantity'];
+      'InputFile', 'FileFormat', 'Units', 'Component', 'Quantity',
+      'Field', 'MagneticFieldDirectionX', 'MagneticFieldDirectionY', 'MagneticFieldDirectionZ',
+      'MagneticFieldStrength', 'MagneticFieldGradientX', 'MagneticFieldGradientY', 'MagneticField3DTable'];
     const PROP_MAP = Object.fromEntries(KNOWN_PROPS.map(p => [p.toLowerCase(), p]));
 
     function normalizeProp(p){
@@ -1486,6 +1508,140 @@ s:Sc/DoseScorer/OutputFile = "dose_output"
       }
     }
 
+    // ---------------------------------------------------------------------------------
+    // Magnetic fields. TOPAS attaches a field to a component (Ge/<Comp>/Field) and defines it in
+    // that component's frame: DipoleMagnet (and the magnetic part of UniformElectroMagnetic) is
+    // uniform, QuadrupoleMagnet has Bx = GradientX·y, By = GradientY·x. Each field is drawn as
+    // arrows on a grid inside the solid, all colored on one |B| scale.
+    // ---------------------------------------------------------------------------------
+    // viridis, starting at 0.15 so the weakest arrows don't vanish on the dark background
+    const VIRIDIS = ['#440154', '#472d7b', '#3b528b', '#2c728e', '#21918c', '#28ae80', '#5ec962', '#addc30', '#fde725']
+      .map(h => new THREE.Color(h));
+    const FIELD_CMAP_START = 0.15;
+
+    function fieldColor(t) {
+      const x = (FIELD_CMAP_START + (1 - FIELD_CMAP_START) * Math.min(1, Math.max(0, t))) * (VIRIDIS.length - 1);
+      const i = Math.min(Math.floor(x), VIRIDIS.length - 2);
+      return VIRIDIS[i].clone().lerp(VIRIDIS[i + 1], x - i);
+    }
+
+    // Local-frame field function for a component, or a reason it can't be drawn
+    function fieldFunction(name, p) {
+      const type = String(p.Field).toLowerCase();
+      if (type === 'dipolemagnet' || type === 'uniformelectromagnetic') {
+        const missing = ['MagneticFieldDirectionX', 'MagneticFieldDirectionY', 'MagneticFieldDirectionZ', 'MagneticFieldStrength']
+          .filter(k => typeof p[k] !== 'number');
+        if (missing.length) return { error: `${name}: ${p.Field} needs ${missing.join(', ')}` };
+        const dir = new THREE.Vector3(p.MagneticFieldDirectionX, p.MagneticFieldDirectionY, p.MagneticFieldDirectionZ);
+        if (dir.lengthSq() === 0) return { error: `${name}: MagneticFieldDirection is all zero` };
+        const B = dir.normalize().multiplyScalar(p.MagneticFieldStrength);
+        return { fn: () => B };
+      }
+      if (type === 'quadrupolemagnet') {
+        const missing = ['MagneticFieldGradientX', 'MagneticFieldGradientY'].filter(k => typeof p[k] !== 'number');
+        if (missing.length) return { error: `${name}: QuadrupoleMagnet needs ${missing.join(', ')}` };
+        const gx = p.MagneticFieldGradientX, gy = p.MagneticFieldGradientY;
+        return { fn: v => new THREE.Vector3(gx * v.y, gy * v.x, 0) };
+      }
+      if (type.includes('mapped')) return { warning: `${name}: ${p.Field} field maps aren't drawn` };
+      return { warning: `${name}: Quick View doesn't draw Field '${p.Field}'` };
+    }
+
+    // Cell centres of a grid over the solid's bounding box (local frame), kept when inside it
+    function fieldGridPoints(geometry) {
+      if (!geometry.boundingBox) geometry.computeBoundingBox();
+      const box = geometry.boundingBox, size = box.getSize(new THREE.Vector3());
+      const step = Math.max(size.x, size.y, size.z) / fieldDensity;
+      if (!(step > 0)) return { points: [], step: 0 };
+      const n = [size.x, size.y, size.z].map(s => Math.max(1, Math.round(s / step)));
+      const probe = new THREE.Mesh(geometry, SAMPLE_MATERIAL);
+      const points = [];
+      for (let i = 0; i < n[0]; i++) for (let j = 0; j < n[1]; j++) for (let k = 0; k < n[2]; k++) {
+        const p = new THREE.Vector3(
+          box.min.x + (i + 0.5) * size.x / n[0],
+          box.min.y + (j + 0.5) * size.y / n[1],
+          box.min.z + (k + 0.5) * size.z / n[2]);
+        sampleRaycaster.set(p, SAMPLE_RAY);
+        if (sampleRaycaster.intersectObject(probe, false).length % 2 === 1) points.push(p);
+      }
+      return { points, step: Math.min(...[size.x / n[0], size.y / n[1], size.z / n[2]].filter(s => s > 0)) };
+    }
+
+    function clearFields() {
+      while (fieldGroup.children.length > 0) {
+        const child = fieldGroup.children[0];
+        child.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+        fieldGroup.remove(child);
+      }
+    }
+
+    function drawFields(geom, meshes = lastMeshes, warnings = null, errors = null) {
+      clearFields();
+      const samples = [];  // { pos, B } in TOPAS world coordinates, plus arrow length
+      for (const [name, p] of Object.entries(geom)) {
+        if (p.Field === undefined) continue;
+        const f = fieldFunction(name, p);
+        if (f.error) { if (errors) errors.push(f.error); continue; }
+        if (f.warning) { if (warnings) warnings.push(f.warning); continue; }
+        if (!meshes[name] || !meshes[name].isMesh) {
+          if (warnings) warnings.push(`${name}: no drawable solid to show its field in`);
+          continue;
+        }
+        const matrix = getWorldMatrix(name, geom);
+        const rot = new THREE.Quaternion();
+        matrix.decompose(new THREE.Vector3(), rot, new THREE.Vector3());
+        const { points, step } = fieldGridPoints(meshes[name].geometry);
+        for (const local of points) {
+          samples.push({ pos: local.clone().applyMatrix4(matrix), B: f.fn(local).clone().applyQuaternion(rot), len: 0.8 * step });
+        }
+      }
+
+      const colorbar = document.getElementById('fieldColorbar');
+      if (!samples.length) { colorbar.style.display = 'none'; return; }
+
+      const mags = samples.map(s => s.B.length());
+      const bMin = Math.min(...mags), bMax = Math.max(...mags);
+      const range = bMax - bMin > 1e-9 * Math.max(bMax, 1e-12) ? bMax - bMin : 0;
+
+      // Arrows of fixed length (direction) colored by |B| (magnitude): shafts as one LineSegments,
+      // heads as one InstancedMesh
+      const arrows = samples.map((s, i) => ({ ...s, mag: mags[i] })).filter(s => s.mag > 0);
+      const pos = [], col = [];
+      const heads = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 8).translate(0, -0.5, 0),
+        new THREE.MeshBasicMaterial({ transparent: true }), arrows.length);
+      const up = new THREE.Vector3(0, 1, 0), m = new THREE.Matrix4(), q = new THREE.Quaternion();
+      arrows.forEach((s, i) => {
+        const dir = s.B.clone().divideScalar(s.mag);
+        const tail = s.pos.clone().addScaledVector(dir, -s.len / 2), tip = s.pos.clone().addScaledVector(dir, s.len / 2);
+        const c = fieldColor(range ? (s.mag - bMin) / range : 1);
+        pos.push(tail.x, tail.y, tail.z, tip.x, tip.y, tip.z);
+        col.push(c.r, c.g, c.b, c.r, c.g, c.b);
+        q.setFromUnitVectors(up, dir);
+        m.compose(tip, q, new THREE.Vector3(0.12 * s.len, 0.3 * s.len, 0.12 * s.len));
+        heads.setMatrixAt(i, m);
+        heads.setColorAt(i, c);
+      });
+      const shaftGeom = new THREE.BufferGeometry();
+      shaftGeom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      shaftGeom.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      // transparent (at full opacity) so they render after, and over, the see-through solids
+      fieldGroup.add(onTop(new THREE.LineSegments(shaftGeom, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true }))));
+      fieldGroup.add(onTop(heads));
+      // Points where |B| = 0 (e.g. a quadrupole's axis) get a dot in the low-end color
+      const nulls = samples.filter((s, i) => mags[i] === 0).map(s => s.pos);
+      if (nulls.length) fieldGroup.add(makePoints(nulls, fieldColor(0).getHex(), 4));
+      fieldGroup.visible = showField;
+
+      const fmt = v => Math.abs(v) >= 1e-3 && Math.abs(v) < 1e4 ? String(+v.toPrecision(3)) : v.toExponential(2);
+      const stops = Array.from({ length: 11 }, (_, i) => `#${fieldColor(1 - i / 10).getHexString()} ${i * 10}%`);
+      document.getElementById('fieldColorbarBar').style.background = range
+        ? `linear-gradient(to bottom, ${stops.join(', ')})` : `#${fieldColor(1).getHexString()}`;
+      document.getElementById('fieldColorbarMax').textContent = fmt(bMax);
+      document.getElementById('fieldColorbarMid').textContent = range ? fmt((bMin + bMax) / 2) : 'uniform';
+      document.getElementById('fieldColorbarMin').textContent = range ? fmt(bMin) : '';
+      colorbar.style.display = showField ? 'flex' : 'none';
+    }
+
     function makeTextSprite(text, color) {
       const canvas = document.createElement('canvas');
       canvas.width = 256;
@@ -1739,6 +1895,7 @@ s:Ge/Patient/Material = "G4_TISSUE_SOFT_ICRP"
       syncSTLPositions(parsedGeometry, warnings);
       updateSTLList();
       drawSources(parsedSources, parsedGeometry, meshes, warnings);
+      drawFields(parsedGeometry, meshes, warnings, errors);
       scene.updateMatrixWorld(true);
 
       // Dynamic Dose Scorer Box Outlines
@@ -1872,6 +2029,13 @@ s:Ge/Patient/Material = "G4_TISSUE_SOFT_ICRP"
         'i:NumberOfHistoriesInRun = 100'] },
     };
 
+    // Field templates: a component of this shape with the field's parameters
+    const FIELD_TEMPLATES = {
+      DipoleMagnet: { volume: 'TsBox', params: ['u:MagneticFieldDirectionX = 0.0', 'u:MagneticFieldDirectionY = 1.0',
+        'u:MagneticFieldDirectionZ = 0.0', 'd:MagneticFieldStrength = 1.5 tesla'] },
+      QuadrupoleMagnet: { volume: 'TsCylinder', params: ['d:MagneticFieldGradientX = 10 T/m', 'd:MagneticFieldGradientY = 10 T/m'] },
+    };
+
     function uniqueName(base, taken) {
       let name = base, i = 2;
       while (taken[name]) name = base + i++;
@@ -1926,6 +2090,14 @@ s:Ge/Patient/Material = "G4_TISSUE_SOFT_ICRP"
       appendBlock(lines);
     }
 
+    function insertFieldTemplate(type) {
+      const t = FIELD_TEMPLATES[type];
+      const name = uniqueName(type.replace(/Magnet$/, '') + 'Field', parsedGeometry);
+      const line = (prefix, prop, value) => `${prefix}:Ge/${name}/${prop.padEnd(12)} = ${value}`;
+      appendBlock([`# ${type} field`, ...componentBlock(t.volume, name).map(l => l.replace('"G4_WATER"', '"G4_Galactic"')),
+                   line('s', 'Field', `"${type}"`), ...t.params.map(p => templateLine('Ge', name, p))]);
+    }
+
     function debounce(fn, ms){
       let t;
       return (...args)=>{
@@ -1944,6 +2116,8 @@ s:Ge/Patient/Material = "G4_TISSUE_SOFT_ICRP"
       'Other': ['s:Parent', 's:Material', 's:Color', 's:DrawingStyle', 'b:Invisible']
     };
     const CAD_SPECS = ['s:InputFile', 's:FileFormat', 'd:Units mm'];
+    const FIELD_SPECS = ['s:Field', 'u:MagneticFieldDirectionX', 'u:MagneticFieldDirectionY', 'u:MagneticFieldDirectionZ',
+      'd:MagneticFieldStrength tesla', 'd:MagneticFieldGradientX T/m', 'd:MagneticFieldGradientY T/m'];
 
     function parseSpec(spec) {
       const [, prefix, name, unit] = spec.match(/^(\w+):(\w+)(?:\s+(\S+))?$/);
@@ -1990,6 +2164,7 @@ s:Ge/Patient/Material = "G4_TISSUE_SOFT_ICRP"
       for (const [label, specs] of Object.entries(PLACEMENT_SPECS)) {
         groups.push({ label, items: specs.map(parseSpec) });
       }
+      if (type !== 'Group') groups.push({ label: 'Magnetic field', items: FIELD_SPECS.map(parseSpec) });
       return groups;
     }
 
@@ -2119,6 +2294,15 @@ s:Ge/Patient/Material = "G4_TISSUE_SOFT_ICRP"
         showAxes=!showAxes;
         axesHelper.visible=showAxes;
       };
+      document.getElementById('btnField').onclick = () => {
+        showField = !showField;
+        fieldGroup.visible = showField;
+        document.getElementById('fieldColorbar').style.display = showField && fieldGroup.children.length ? 'flex' : 'none';
+      };
+      document.getElementById('fieldDensity').oninput = (e) => {
+        fieldDensity = Math.min(30, Math.max(2, parseInt(e.target.value, 10) || 8));
+        drawFields(parsedGeometry);
+      };
       document.getElementById('opacity').oninput = (e)=>{
         currentOpacity = parseFloat(e.target.value);
         applyWireframe();
@@ -2133,7 +2317,7 @@ s:Ge/Patient/Material = "G4_TISSUE_SOFT_ICRP"
       };
 
       const shapeSelect = document.getElementById('shapeInsert');
-      [['Shapes', 'shape', Object.keys(SHAPES)], ['Sources', 'source', Object.keys(SOURCE_TEMPLATES)]].forEach(([label, kind, types]) => {
+      [['Shapes', 'shape', Object.keys(SHAPES)], ['Sources', 'source', Object.keys(SOURCE_TEMPLATES)], ['Fields', 'field', Object.keys(FIELD_TEMPLATES)]].forEach(([label, kind, types]) => {
         const group = document.createElement('optgroup');
         group.label = label;
         types.forEach(type => {
@@ -2148,6 +2332,7 @@ s:Ge/Patient/Material = "G4_TISSUE_SOFT_ICRP"
         const [kind, type] = e.target.value.split(':');
         if (kind === 'shape') insertShapeTemplate(type);
         else if (kind === 'source') insertSourceTemplate(type);
+        else if (kind === 'field') insertFieldTemplate(type);
         e.target.value = '';
       };
 
