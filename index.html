@@ -89,7 +89,7 @@
         <button class="btn secondary" id="btnWire">Wireframe</button>
         <button class="btn secondary" id="btnAxes">Axes</button>
         <button class="btn secondary" id="btnField" title="Show/hide magnetic field arrows">B-Field</button>
-        <label class="badge" title="Field arrows along the longest side of each magnetized component">Arrows <input id="fieldDensity" type="number" value="8" min="2" max="30" step="1" style="width: 40px; background: #1a1a1a; color: white; border: 1px solid #333; border-radius: 4px; padding: 2px 4px;"/></label>
+        <label class="badge" title="Field arrows across each magnetized component (along its middle dimension)">Arrows <input id="fieldDensity" type="number" value="8" min="2" max="30" step="1" style="width: 40px; background: #1a1a1a; color: white; border: 1px solid #333; border-radius: 4px; padding: 2px 4px;"/></label>
         <button class="btn secondary" id="btnLoadSTL">Load STL(s)</button>
         <button class="btn secondary" id="btnClearSTL">Clear STLs</button>
         <select id="shapeInsert" title="Append a TOPAS shape, source or field with all of its parameters"><option value="">+ Add</option></select>
@@ -1547,12 +1547,17 @@ s:Sc/DoseScorer/OutputFile = "dose_output"
       return { warning: `${name}: Quick View doesn't draw Field '${p.Field}'` };
     }
 
-    // Cell centres of a grid over the solid's bounding box (local frame), kept when inside it
+    // Cell centres of a grid over the solid's bounding box (local frame), kept when inside it.
+    // fieldDensity arrows span the middle dimension, so long thin magnets still get a cross-section.
     function fieldGridPoints(geometry) {
       if (!geometry.boundingBox) geometry.computeBoundingBox();
       const box = geometry.boundingBox, size = box.getSize(new THREE.Vector3());
-      const step = Math.max(size.x, size.y, size.z) / fieldDensity;
+      const dims = [size.x, size.y, size.z].sort((a, b) => a - b);
+      let step = (dims[1] || dims[2]) / fieldDensity;
       if (!(step > 0)) return { points: [], step: 0 };
+      const MAX_CELLS = 6000;
+      const cells = dims.reduce((a, d) => a * Math.max(1, d / step), 1);
+      if (cells > MAX_CELLS) step *= Math.cbrt(cells / MAX_CELLS);
       const n = [size.x, size.y, size.z].map(s => Math.max(1, Math.round(s / step)));
       const probe = new THREE.Mesh(geometry, SAMPLE_MATERIAL);
       const points = [];
@@ -1632,7 +1637,7 @@ s:Sc/DoseScorer/OutputFile = "dose_output"
       if (nulls.length) fieldGroup.add(makePoints(nulls, fieldColor(0).getHex(), 4));
       fieldGroup.visible = showField;
 
-      const fmt = v => Math.abs(v) >= 1e-3 && Math.abs(v) < 1e4 ? String(+v.toPrecision(3)) : v.toExponential(2);
+      const fmt = v => v === 0 ? '0' : Math.abs(v) >= 1e-3 && Math.abs(v) < 1e4 ? String(+v.toPrecision(3)) : v.toExponential(2);
       const stops = Array.from({ length: 11 }, (_, i) => `#${fieldColor(1 - i / 10).getHexString()} ${i * 10}%`);
       document.getElementById('fieldColorbarBar').style.background = range
         ? `linear-gradient(to bottom, ${stops.join(', ')})` : `#${fieldColor(1).getHexString()}`;
