@@ -37,6 +37,7 @@ Kevin's Quick View provides instant visual feedback:
 -  Interactive camera controls (rotate, zoom, pan)
 -  All TOPAS solids (TsBox, TsCylinder, TsSphere and every G4 solid) plus TsCAD/STL import
 -  Source display: Beam, PhaseSpace, Emittance, Isotropic, Distributed, Volumetric and Environment
+-  Magnetic fields (`Ge/<Component>/Field`): DipoleMagnet, QuadrupoleMagnet and the magnetic part of UniformElectroMagnetic drawn as a 3D vector map inside the component, colored by |B| (viridis) with a colorbar; B-Field toggles it and Arrows sets the grid density
 -  "+ Add" templates and a click-a-line menu that writes in missing parameters
 -  Color-coded components
 -  Companion viewers for GAMOS (`gamos.html`: Geant4 text geometry + `/gamos/generator` sources) and plain Geant4 (`geant4.html`: GDML + `/gps` General Particle Source), switchable from the buttons at the top of each page
