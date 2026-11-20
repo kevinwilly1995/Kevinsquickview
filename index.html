@@ -349,38 +349,206 @@
     function initEditor(){
       const editorElement = document.getElementById('editor');
       editor = CodeMirror(editorElement, {
-        value: `# Example with beam source & scorer
-s:Ge/World/Type = "TsBox"
-d:Ge/World/HLX = 50 cm
-d:Ge/World/HLY = 50 cm
-d:Ge/World/HLZ = 50 cm
-s:Ge/World/Material = "Air"
+        value: `# Hello World!
+d:Ge/World/HLX = 20. cm
+d:Ge/World/HLY = 20. cm
+d:Ge/World/HLZ = 20. cm
+s:Ge/World/Material = "G4_AIR"
+b:Ge/World/Invisible = "True"
+ 
 
-# Patient target (placeholder)
-s:Ge/Patient/Type = "TsBox"
-s:Ge/Patient/Parent = "World"
-d:Ge/Patient/HLX = 12 cm
-d:Ge/Patient/HLY = 12 cm
-d:Ge/Patient/HLZ = 9 cm
-s:Ge/Patient/Material = "Water"
+# Group that holds all slices: move/rotate the whole heart here
+s:Ge/Heart/Type     = "Group"
+s:Ge/Heart/Parent   = "World"
+d:Ge/Heart/TransX   = 0. cm
+d:Ge/Heart/TransY   = 0. cm
+d:Ge/Heart/TransZ   = 0. cm
+d:Ge/Heart/RotX     = -90. deg
+d:Ge/Heart/RotY     = -40. deg
+d:Ge/Heart/RotZ     = 0. deg
+ 
+# slice 1
+s:Ge/HeartSlice01/Type     = "G4ExtrudedSolid"
+s:Ge/HeartSlice01/Parent   = "Heart"
+s:Ge/HeartSlice01/Material = "G4_TISSUE_SOFT_ICRP"
+s:Ge/HeartSlice01/Color    = "red"
+dv:Ge/HeartSlice01/Polygons = 96 0.0 2.625 0.0125 2.7459 0.0971 3.0844 0.3138 3.5733 0.7 4.1154 1.2634 4.6028 1.9799 4.9373 2.7963 5.0476 3.6373 4.9 4.4161 4.5004 5.0468 3.8881 5.4575 3.124 5.6 2.275 5.4575 1.4005 5.0468 0.5429 4.4161 -0.2755 3.6373 -1.05 2.7963 -1.7855 1.9799 -2.4873 1.2634 -3.1525 0.7 -3.7654 0.3138 -4.2982 0.0971 -4.7155 0.0125 -4.9828 0.0 -5.075 -0.0125 -4.9828 -0.0971 -4.7155 -0.3138 -4.2982 -0.7 -3.7654 -1.2634 -3.1525 -1.9799 -2.4873 -2.7963 -1.7855 -3.6373 -1.05 -4.4161 -0.2755 -5.0468 0.5429 -5.4575 1.4005 -5.6 2.275 -5.4575 3.124 -5.0468 3.8881 -4.4161 4.5004 -3.6373 4.9 -2.7963 5.0476 -1.9799 4.9373 -1.2634 4.6028 -0.7 4.1154 -0.3138 3.5733 -0.0971 3.0844 -0.0125 2.7459 cm
+d:Ge/HeartSlice01/HLZ      = 0.2917 cm
+d:Ge/HeartSlice01/TransZ   = -3.2083 cm
+dv:Ge/HeartSlice01/Off1    = 2 0. 0. cm
+u:Ge/HeartSlice01/Scale1    = 0.25
+dv:Ge/HeartSlice01/Off2    = 2 0. 0. cm
+u:Ge/HeartSlice01/Scale2    = 0.5528
+ 
+# slice 2
+s:Ge/HeartSlice02/Type     = "G4ExtrudedSolid"
+s:Ge/HeartSlice02/Parent   = "Heart"
+s:Ge/HeartSlice02/Material = "G4_TISSUE_SOFT_ICRP"
+s:Ge/HeartSlice02/Color    = "red"
+dv:Ge/HeartSlice02/Polygons = 96 0.0 2.625 0.0125 2.7459 0.0971 3.0844 0.3138 3.5733 0.7 4.1154 1.2634 4.6028 1.9799 4.9373 2.7963 5.0476 3.6373 4.9 4.4161 4.5004 5.0468 3.8881 5.4575 3.124 5.6 2.275 5.4575 1.4005 5.0468 0.5429 4.4161 -0.2755 3.6373 -1.05 2.7963 -1.7855 1.9799 -2.4873 1.2634 -3.1525 0.7 -3.7654 0.3138 -4.2982 0.0971 -4.7155 0.0125 -4.9828 0.0 -5.075 -0.0125 -4.9828 -0.0971 -4.7155 -0.3138 -4.2982 -0.7 -3.7654 -1.2634 -3.1525 -1.9799 -2.4873 -2.7963 -1.7855 -3.6373 -1.05 -4.4161 -0.2755 -5.0468 0.5429 -5.4575 1.4005 -5.6 2.275 -5.4575 3.124 -5.0468 3.8881 -4.4161 4.5004 -3.6373 4.9 -2.7963 5.0476 -1.9799 4.9373 -1.2634 4.6028 -0.7 4.1154 -0.3138 3.5733 -0.0971 3.0844 -0.0125 2.7459 cm
+d:Ge/HeartSlice02/HLZ      = 0.2917 cm
+d:Ge/HeartSlice02/TransZ   = -2.625 cm
+dv:Ge/HeartSlice02/Off1    = 2 0. 0. cm
+u:Ge/HeartSlice02/Scale1    = 0.5528
+dv:Ge/HeartSlice02/Off2    = 2 0. 0. cm
+u:Ge/HeartSlice02/Scale2    = 0.7454
+ 
+# slice 3
+s:Ge/HeartSlice03/Type     = "G4ExtrudedSolid"
+s:Ge/HeartSlice03/Parent   = "Heart"
+s:Ge/HeartSlice03/Material = "G4_TISSUE_SOFT_ICRP"
+s:Ge/HeartSlice03/Color    = "red"
+dv:Ge/HeartSlice03/Polygons = 96 0.0 2.625 0.0125 2.7459 0.0971 3.0844 0.3138 3.5733 0.7 4.1154 1.2634 4.6028 1.9799 4.9373 2.7963 5.0476 3.6373 4.9 4.4161 4.5004 5.0468 3.8881 5.4575 3.124 5.6 2.275 5.4575 1.4005 5.0468 0.5429 4.4161 -0.2755 3.6373 -1.05 2.7963 -1.7855 1.9799 -2.4873 1.2634 -3.1525 0.7 -3.7654 0.3138 -4.2982 0.0971 -4.7155 0.0125 -4.9828 0.0 -5.075 -0.0125 -4.9828 -0.0971 -4.7155 -0.3138 -4.2982 -0.7 -3.7654 -1.2634 -3.1525 -1.9799 -2.4873 -2.7963 -1.7855 -3.6373 -1.05 -4.4161 -0.2755 -5.0468 0.5429 -5.4575 1.4005 -5.6 2.275 -5.4575 3.124 -5.0468 3.8881 -4.4161 4.5004 -3.6373 4.9 -2.7963 5.0476 -1.9799 4.9373 -1.2634 4.6028 -0.7 4.1154 -0.3138 3.5733 -0.0971 3.0844 -0.0125 2.7459 cm
+d:Ge/HeartSlice03/HLZ      = 0.2917 cm
+d:Ge/HeartSlice03/TransZ   = -2.0417 cm
+dv:Ge/HeartSlice03/Off1    = 2 0. 0. cm
+u:Ge/HeartSlice03/Scale1    = 0.7454
+dv:Ge/HeartSlice03/Off2    = 2 0. 0. cm
+u:Ge/HeartSlice03/Scale2    = 0.866
+ 
+# slice 4
+s:Ge/HeartSlice04/Type     = "G4ExtrudedSolid"
+s:Ge/HeartSlice04/Parent   = "Heart"
+s:Ge/HeartSlice04/Material = "G4_TISSUE_SOFT_ICRP"
+s:Ge/HeartSlice04/Color    = "red"
+dv:Ge/HeartSlice04/Polygons = 96 0.0 2.625 0.0125 2.7459 0.0971 3.0844 0.3138 3.5733 0.7 4.1154 1.2634 4.6028 1.9799 4.9373 2.7963 5.0476 3.6373 4.9 4.4161 4.5004 5.0468 3.8881 5.4575 3.124 5.6 2.275 5.4575 1.4005 5.0468 0.5429 4.4161 -0.2755 3.6373 -1.05 2.7963 -1.7855 1.9799 -2.4873 1.2634 -3.1525 0.7 -3.7654 0.3138 -4.2982 0.0971 -4.7155 0.0125 -4.9828 0.0 -5.075 -0.0125 -4.9828 -0.0971 -4.7155 -0.3138 -4.2982 -0.7 -3.7654 -1.2634 -3.1525 -1.9799 -2.4873 -2.7963 -1.7855 -3.6373 -1.05 -4.4161 -0.2755 -5.0468 0.5429 -5.4575 1.4005 -5.6 2.275 -5.4575 3.124 -5.0468 3.8881 -4.4161 4.5004 -3.6373 4.9 -2.7963 5.0476 -1.9799 4.9373 -1.2634 4.6028 -0.7 4.1154 -0.3138 3.5733 -0.0971 3.0844 -0.0125 2.7459 cm
+d:Ge/HeartSlice04/HLZ      = 0.2917 cm
+d:Ge/HeartSlice04/TransZ   = -1.4583 cm
+dv:Ge/HeartSlice04/Off1    = 2 0. 0. cm
+u:Ge/HeartSlice04/Scale1    = 0.866
+dv:Ge/HeartSlice04/Off2    = 2 0. 0. cm
+u:Ge/HeartSlice04/Scale2    = 0.9428
+ 
+# slice 5
+s:Ge/HeartSlice05/Type     = "G4ExtrudedSolid"
+s:Ge/HeartSlice05/Parent   = "Heart"
+s:Ge/HeartSlice05/Material = "G4_TISSUE_SOFT_ICRP"
+s:Ge/HeartSlice05/Color    = "red"
+dv:Ge/HeartSlice05/Polygons = 96 0.0 2.625 0.0125 2.7459 0.0971 3.0844 0.3138 3.5733 0.7 4.1154 1.2634 4.6028 1.9799 4.9373 2.7963 5.0476 3.6373 4.9 4.4161 4.5004 5.0468 3.8881 5.4575 3.124 5.6 2.275 5.4575 1.4005 5.0468 0.5429 4.4161 -0.2755 3.6373 -1.05 2.7963 -1.7855 1.9799 -2.4873 1.2634 -3.1525 0.7 -3.7654 0.3138 -4.2982 0.0971 -4.7155 0.0125 -4.9828 0.0 -5.075 -0.0125 -4.9828 -0.0971 -4.7155 -0.3138 -4.2982 -0.7 -3.7654 -1.2634 -3.1525 -1.9799 -2.4873 -2.7963 -1.7855 -3.6373 -1.05 -4.4161 -0.2755 -5.0468 0.5429 -5.4575 1.4005 -5.6 2.275 -5.4575 3.124 -5.0468 3.8881 -4.4161 4.5004 -3.6373 4.9 -2.7963 5.0476 -1.9799 4.9373 -1.2634 4.6028 -0.7 4.1154 -0.3138 3.5733 -0.0971 3.0844 -0.0125 2.7459 cm
+d:Ge/HeartSlice05/HLZ      = 0.2917 cm
+d:Ge/HeartSlice05/TransZ   = -0.875 cm
+dv:Ge/HeartSlice05/Off1    = 2 0. 0. cm
+u:Ge/HeartSlice05/Scale1    = 0.9428
+dv:Ge/HeartSlice05/Off2    = 2 0. 0. cm
+u:Ge/HeartSlice05/Scale2    = 0.986
+ 
+# slice 6
+s:Ge/HeartSlice06/Type     = "G4ExtrudedSolid"
+s:Ge/HeartSlice06/Parent   = "Heart"
+s:Ge/HeartSlice06/Material = "G4_TISSUE_SOFT_ICRP"
+s:Ge/HeartSlice06/Color    = "red"
+dv:Ge/HeartSlice06/Polygons = 96 0.0 2.625 0.0125 2.7459 0.0971 3.0844 0.3138 3.5733 0.7 4.1154 1.2634 4.6028 1.9799 4.9373 2.7963 5.0476 3.6373 4.9 4.4161 4.5004 5.0468 3.8881 5.4575 3.124 5.6 2.275 5.4575 1.4005 5.0468 0.5429 4.4161 -0.2755 3.6373 -1.05 2.7963 -1.7855 1.9799 -2.4873 1.2634 -3.1525 0.7 -3.7654 0.3138 -4.2982 0.0971 -4.7155 0.0125 -4.9828 0.0 -5.075 -0.0125 -4.9828 -0.0971 -4.7155 -0.3138 -4.2982 -0.7 -3.7654 -1.2634 -3.1525 -1.9799 -2.4873 -2.7963 -1.7855 -3.6373 -1.05 -4.4161 -0.2755 -5.0468 0.5429 -5.4575 1.4005 -5.6 2.275 -5.4575 3.124 -5.0468 3.8881 -4.4161 4.5004 -3.6373 4.9 -2.7963 5.0476 -1.9799 4.9373 -1.2634 4.6028 -0.7 4.1154 -0.3138 3.5733 -0.0971 3.0844 -0.0125 2.7459 cm
+d:Ge/HeartSlice06/HLZ      = 0.2917 cm
+d:Ge/HeartSlice06/TransZ   = -0.2917 cm
+dv:Ge/HeartSlice06/Off1    = 2 0. 0. cm
+u:Ge/HeartSlice06/Scale1    = 0.986
+dv:Ge/HeartSlice06/Off2    = 2 0. 0. cm
+u:Ge/HeartSlice06/Scale2    = 1.0
+ 
+# slice 7
+s:Ge/HeartSlice07/Type     = "G4ExtrudedSolid"
+s:Ge/HeartSlice07/Parent   = "Heart"
+s:Ge/HeartSlice07/Material = "G4_TISSUE_SOFT_ICRP"
+s:Ge/HeartSlice07/Color    = "red"
+dv:Ge/HeartSlice07/Polygons = 96 0.0 2.625 0.0125 2.7459 0.0971 3.0844 0.3138 3.5733 0.7 4.1154 1.2634 4.6028 1.9799 4.9373 2.7963 5.0476 3.6373 4.9 4.4161 4.5004 5.0468 3.8881 5.4575 3.124 5.6 2.275 5.4575 1.4005 5.0468 0.5429 4.4161 -0.2755 3.6373 -1.05 2.7963 -1.7855 1.9799 -2.4873 1.2634 -3.1525 0.7 -3.7654 0.3138 -4.2982 0.0971 -4.7155 0.0125 -4.9828 0.0 -5.075 -0.0125 -4.9828 -0.0971 -4.7155 -0.3138 -4.2982 -0.7 -3.7654 -1.2634 -3.1525 -1.9799 -2.4873 -2.7963 -1.7855 -3.6373 -1.05 -4.4161 -0.2755 -5.0468 0.5429 -5.4575 1.4005 -5.6 2.275 -5.4575 3.124 -5.0468 3.8881 -4.4161 4.5004 -3.6373 4.9 -2.7963 5.0476 -1.9799 4.9373 -1.2634 4.6028 -0.7 4.1154 -0.3138 3.5733 -0.0971 3.0844 -0.0125 2.7459 cm
+d:Ge/HeartSlice07/HLZ      = 0.2917 cm
+d:Ge/HeartSlice07/TransZ   = 0.2917 cm
+dv:Ge/HeartSlice07/Off1    = 2 0. 0. cm
+u:Ge/HeartSlice07/Scale1    = 1.0
+dv:Ge/HeartSlice07/Off2    = 2 0. 0. cm
+u:Ge/HeartSlice07/Scale2    = 0.986
+ 
+# slice 8
+s:Ge/HeartSlice08/Type     = "G4ExtrudedSolid"
+s:Ge/HeartSlice08/Parent   = "Heart"
+s:Ge/HeartSlice08/Material = "G4_TISSUE_SOFT_ICRP"
+s:Ge/HeartSlice08/Color    = "red"
+dv:Ge/HeartSlice08/Polygons = 96 0.0 2.625 0.0125 2.7459 0.0971 3.0844 0.3138 3.5733 0.7 4.1154 1.2634 4.6028 1.9799 4.9373 2.7963 5.0476 3.6373 4.9 4.4161 4.5004 5.0468 3.8881 5.4575 3.124 5.6 2.275 5.4575 1.4005 5.0468 0.5429 4.4161 -0.2755 3.6373 -1.05 2.7963 -1.7855 1.9799 -2.4873 1.2634 -3.1525 0.7 -3.7654 0.3138 -4.2982 0.0971 -4.7155 0.0125 -4.9828 0.0 -5.075 -0.0125 -4.9828 -0.0971 -4.7155 -0.3138 -4.2982 -0.7 -3.7654 -1.2634 -3.1525 -1.9799 -2.4873 -2.7963 -1.7855 -3.6373 -1.05 -4.4161 -0.2755 -5.0468 0.5429 -5.4575 1.4005 -5.6 2.275 -5.4575 3.124 -5.0468 3.8881 -4.4161 4.5004 -3.6373 4.9 -2.7963 5.0476 -1.9799 4.9373 -1.2634 4.6028 -0.7 4.1154 -0.3138 3.5733 -0.0971 3.0844 -0.0125 2.7459 cm
+d:Ge/HeartSlice08/HLZ      = 0.2917 cm
+d:Ge/HeartSlice08/TransZ   = 0.875 cm
+dv:Ge/HeartSlice08/Off1    = 2 0. 0. cm
+u:Ge/HeartSlice08/Scale1    = 0.986
+dv:Ge/HeartSlice08/Off2    = 2 0. 0. cm
+u:Ge/HeartSlice08/Scale2    = 0.9428
+ 
+# slice 9
+s:Ge/HeartSlice09/Type     = "G4ExtrudedSolid"
+s:Ge/HeartSlice09/Parent   = "Heart"
+s:Ge/HeartSlice09/Material = "G4_TISSUE_SOFT_ICRP"
+s:Ge/HeartSlice09/Color    = "red"
+dv:Ge/HeartSlice09/Polygons = 96 0.0 2.625 0.0125 2.7459 0.0971 3.0844 0.3138 3.5733 0.7 4.1154 1.2634 4.6028 1.9799 4.9373 2.7963 5.0476 3.6373 4.9 4.4161 4.5004 5.0468 3.8881 5.4575 3.124 5.6 2.275 5.4575 1.4005 5.0468 0.5429 4.4161 -0.2755 3.6373 -1.05 2.7963 -1.7855 1.9799 -2.4873 1.2634 -3.1525 0.7 -3.7654 0.3138 -4.2982 0.0971 -4.7155 0.0125 -4.9828 0.0 -5.075 -0.0125 -4.9828 -0.0971 -4.7155 -0.3138 -4.2982 -0.7 -3.7654 -1.2634 -3.1525 -1.9799 -2.4873 -2.7963 -1.7855 -3.6373 -1.05 -4.4161 -0.2755 -5.0468 0.5429 -5.4575 1.4005 -5.6 2.275 -5.4575 3.124 -5.0468 3.8881 -4.4161 4.5004 -3.6373 4.9 -2.7963 5.0476 -1.9799 4.9373 -1.2634 4.6028 -0.7 4.1154 -0.3138 3.5733 -0.0971 3.0844 -0.0125 2.7459 cm
+d:Ge/HeartSlice09/HLZ      = 0.2917 cm
+d:Ge/HeartSlice09/TransZ   = 1.4583 cm
+dv:Ge/HeartSlice09/Off1    = 2 0. 0. cm
+u:Ge/HeartSlice09/Scale1    = 0.9428
+dv:Ge/HeartSlice09/Off2    = 2 0. 0. cm
+u:Ge/HeartSlice09/Scale2    = 0.866
+ 
+# slice 10
+s:Ge/HeartSlice10/Type     = "G4ExtrudedSolid"
+s:Ge/HeartSlice10/Parent   = "Heart"
+s:Ge/HeartSlice10/Material = "G4_TISSUE_SOFT_ICRP"
+s:Ge/HeartSlice10/Color    = "red"
+dv:Ge/HeartSlice10/Polygons = 96 0.0 2.625 0.0125 2.7459 0.0971 3.0844 0.3138 3.5733 0.7 4.1154 1.2634 4.6028 1.9799 4.9373 2.7963 5.0476 3.6373 4.9 4.4161 4.5004 5.0468 3.8881 5.4575 3.124 5.6 2.275 5.4575 1.4005 5.0468 0.5429 4.4161 -0.2755 3.6373 -1.05 2.7963 -1.7855 1.9799 -2.4873 1.2634 -3.1525 0.7 -3.7654 0.3138 -4.2982 0.0971 -4.7155 0.0125 -4.9828 0.0 -5.075 -0.0125 -4.9828 -0.0971 -4.7155 -0.3138 -4.2982 -0.7 -3.7654 -1.2634 -3.1525 -1.9799 -2.4873 -2.7963 -1.7855 -3.6373 -1.05 -4.4161 -0.2755 -5.0468 0.5429 -5.4575 1.4005 -5.6 2.275 -5.4575 3.124 -5.0468 3.8881 -4.4161 4.5004 -3.6373 4.9 -2.7963 5.0476 -1.9799 4.9373 -1.2634 4.6028 -0.7 4.1154 -0.3138 3.5733 -0.0971 3.0844 -0.0125 2.7459 cm
+d:Ge/HeartSlice10/HLZ      = 0.2917 cm
+d:Ge/HeartSlice10/TransZ   = 2.0417 cm
+dv:Ge/HeartSlice10/Off1    = 2 0. 0. cm
+u:Ge/HeartSlice10/Scale1    = 0.866
+dv:Ge/HeartSlice10/Off2    = 2 0. 0. cm
+u:Ge/HeartSlice10/Scale2    = 0.7454
+ 
+# slice 11
+s:Ge/HeartSlice11/Type     = "G4ExtrudedSolid"
+s:Ge/HeartSlice11/Parent   = "Heart"
+s:Ge/HeartSlice11/Material = "G4_TISSUE_SOFT_ICRP"
+s:Ge/HeartSlice11/Color    = "red"
+dv:Ge/HeartSlice11/Polygons = 96 0.0 2.625 0.0125 2.7459 0.0971 3.0844 0.3138 3.5733 0.7 4.1154 1.2634 4.6028 1.9799 4.9373 2.7963 5.0476 3.6373 4.9 4.4161 4.5004 5.0468 3.8881 5.4575 3.124 5.6 2.275 5.4575 1.4005 5.0468 0.5429 4.4161 -0.2755 3.6373 -1.05 2.7963 -1.7855 1.9799 -2.4873 1.2634 -3.1525 0.7 -3.7654 0.3138 -4.2982 0.0971 -4.7155 0.0125 -4.9828 0.0 -5.075 -0.0125 -4.9828 -0.0971 -4.7155 -0.3138 -4.2982 -0.7 -3.7654 -1.2634 -3.1525 -1.9799 -2.4873 -2.7963 -1.7855 -3.6373 -1.05 -4.4161 -0.2755 -5.0468 0.5429 -5.4575 1.4005 -5.6 2.275 -5.4575 3.124 -5.0468 3.8881 -4.4161 4.5004 -3.6373 4.9 -2.7963 5.0476 -1.9799 4.9373 -1.2634 4.6028 -0.7 4.1154 -0.3138 3.5733 -0.0971 3.0844 -0.0125 2.7459 cm
+d:Ge/HeartSlice11/HLZ      = 0.2917 cm
+d:Ge/HeartSlice11/TransZ   = 2.625 cm
+dv:Ge/HeartSlice11/Off1    = 2 0. 0. cm
+u:Ge/HeartSlice11/Scale1    = 0.7454
+dv:Ge/HeartSlice11/Off2    = 2 0. 0. cm
+u:Ge/HeartSlice11/Scale2    = 0.5528
+ 
+# slice 12
+s:Ge/HeartSlice12/Type     = "G4ExtrudedSolid"
+s:Ge/HeartSlice12/Parent   = "Heart"
+s:Ge/HeartSlice12/Material = "G4_TISSUE_SOFT_ICRP"
+s:Ge/HeartSlice12/Color    = "red"
+dv:Ge/HeartSlice12/Polygons = 96 0.0 2.625 0.0125 2.7459 0.0971 3.0844 0.3138 3.5733 0.7 4.1154 1.2634 4.6028 1.9799 4.9373 2.7963 5.0476 3.6373 4.9 4.4161 4.5004 5.0468 3.8881 5.4575 3.124 5.6 2.275 5.4575 1.4005 5.0468 0.5429 4.4161 -0.2755 3.6373 -1.05 2.7963 -1.7855 1.9799 -2.4873 1.2634 -3.1525 0.7 -3.7654 0.3138 -4.2982 0.0971 -4.7155 0.0125 -4.9828 0.0 -5.075 -0.0125 -4.9828 -0.0971 -4.7155 -0.3138 -4.2982 -0.7 -3.7654 -1.2634 -3.1525 -1.9799 -2.4873 -2.7963 -1.7855 -3.6373 -1.05 -4.4161 -0.2755 -5.0468 0.5429 -5.4575 1.4005 -5.6 2.275 -5.4575 3.124 -5.0468 3.8881 -4.4161 4.5004 -3.6373 4.9 -2.7963 5.0476 -1.9799 4.9373 -1.2634 4.6028 -0.7 4.1154 -0.3138 3.5733 -0.0971 3.0844 -0.0125 2.7459 cm
+d:Ge/HeartSlice12/HLZ      = 0.2917 cm
+d:Ge/HeartSlice12/TransZ   = 3.2083 cm
+dv:Ge/HeartSlice12/Off1    = 2 0. 0. cm
+u:Ge/HeartSlice12/Scale1    = 0.5528
+dv:Ge/HeartSlice12/Off2    = 2 0. 0. cm
+u:Ge/HeartSlice12/Scale2    = 0.25
 
-# Beam position (where the phase space lives)
-s:Ge/BeamPosition/Type = "Group"
-s:Ge/BeamPosition/Parent = "World"
-d:Ge/BeamPosition/TransX = 0 mm
-d:Ge/BeamPosition/TransY = 0 mm
-d:Ge/BeamPosition/TransZ = 250 mm
-d:Ge/BeamPosition/RotX = 180 deg
 
-# Phase space source
-s:So/MySource/Type = "PhaseSpace"
-s:So/MySource/Component = "BeamPosition"
-s:So/MySource/PhaseSpaceFileName = "Mobetron_9MeV_A6I6_1p2"
 
-# Validation Dose Scorer
-s:Sc/DoseScorer/Quantity = "DoseToWater"
-s:Sc/DoseScorer/Component = "Patient"
-s:Sc/DoseScorer/OutputFile = "dose_output"
+# Beam source
+
+s:So/BeamSource/Type         = "Beam"
+s:So/BeamSource/Component    = "BeamPosition"
+s:So/BeamSource/BeamParticle = "proton"
+d:So/BeamSource/BeamEnergy   = 150 MeV
+u:So/BeamSource/BeamEnergySpread = 0.757504
+s:So/BeamSource/BeamPositionDistribution = "Gaussian"
+s:So/BeamSource/BeamPositionCutoffShape = "Ellipse"
+d:So/BeamSource/BeamPositionCutoffX = 10 mm
+d:So/BeamSource/BeamPositionCutoffY = 10 mm
+d:So/BeamSource/BeamPositionSpreadX = 3 mm
+d:So/BeamSource/BeamPositionSpreadY = 3 mm
+s:So/BeamSource/BeamAngularDistribution = "Gaussian"
+d:So/BeamSource/BeamAngularCutoffX = 90 deg
+d:So/BeamSource/BeamAngularCutoffY = 90 deg
+d:So/BeamSource/BeamAngularSpreadX = 0.0032 rad
+d:So/BeamSource/BeamAngularSpreadY = 0.0032 rad
+i:So/BeamSource/NumberOfHistoriesInRun = 100
+d:Ge/BeamPosition/TransX = 35 cm      # 15 cm * sin(30°)
+d:Ge/BeamPosition/TransZ = 17 cm    # 15 cm * cos(30°)
+d:Ge/BeamPosition/RotX   = 0. deg
+d:Ge/BeamPosition/RotY   = 115. deg
+d:Ge/BeamPosition/RotZ = 0
 `,
         mode: 'properties',
         theme: 'material-darker',
